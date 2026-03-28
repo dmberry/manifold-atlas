@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ink: 0 0% 10%;
+    --charcoal: 0 0% 18%;
+    --slate: 0 0% 29%;
+    --ivory: 40 33% 97%;
+    --cream: 40 24% 94%;
+    --parchment: 40 24% 89%;
+    --burgundy: 352 47% 33%;
+    --gold: 43 85% 38%;
+
+    --background: 40 33% 97%;
+    --foreground: 0 0% 10%;
+    --muted: 40 24% 94%;
+    --muted-foreground: 0 0% 42%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --border: 40 24% 87%;
+    --input: 40 24% 87%;
+    --primary: 352 47% 33%;
+    --primary-foreground: 40 33% 97%;
+    --secondary: 43 85% 38%;
+    --secondary-foreground: 0 0% 10%;
+    --ring: 352 47% 33%;
+  }
+
+  .dark {
+    --ink: 40 20% 92%;
+    --charcoal: 40 10% 85%;
+    --slate: 40 8% 65%;
+    --ivory: 220 15% 12%;
+    --cream: 220 12% 16%;
+    --parchment: 220 10% 20%;
+    --burgundy: 352 55% 55%;
+    --gold: 43 75% 55%;
+
+    --background: 220 15% 12%;
+    --foreground: 40 20% 92%;
+    --muted: 220 12% 18%;
+    --muted-foreground: 40 8% 60%;
+    --popover: 220 12% 14%;
+    --popover-foreground: 40 20% 92%;
+    --card: 220 12% 14%;
+    --card-foreground: 40 20% 92%;
+    --border: 220 10% 25%;
+    --input: 220 10% 25%;
+    --primary: 352 55% 55%;
+    --primary-foreground: 220 15% 12%;
+    --secondary: 43 75% 55%;
+    --secondary-foreground: 220 15% 12%;
+    --ring: 352 55% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply bg-background;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1, "kern" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/* Editorial scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--slate) / 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--slate) / 0.35);
+}
+
+/* Editorial buttons */
+.btn-editorial {
+  @apply inline-flex items-center justify-center font-sans text-body-sm font-medium;
+  @apply px-5 py-2.5 border border-parchment-dark rounded-sm;
+  @apply transition-all duration-300 ease-out;
+  @apply focus:outline-none focus:ring-2 focus:ring-burgundy focus:ring-offset-2 focus:ring-offset-background;
+}
+.btn-editorial-primary {
+  @apply btn-editorial bg-burgundy text-primary-foreground border-burgundy;
+  @apply hover:bg-burgundy-900 hover:border-burgundy-900;
+  @apply active:bg-burgundy-950;
+}
+.btn-editorial-secondary {
+  @apply btn-editorial bg-transparent text-ink border-ink/20;
+  @apply hover:bg-cream hover:border-ink/30;
+  @apply active:bg-parchment;
+}
+.btn-editorial-ghost {
+  @apply btn-editorial bg-transparent text-slate border-transparent;
+  @apply hover:text-ink hover:bg-cream;
+  @apply active:bg-parchment;
+}
+
+/* Editorial inputs */
+.input-editorial {
+  @apply w-full font-body text-body-md text-foreground;
+  @apply px-4 py-3 bg-card border border-parchment-dark rounded-sm;
+  @apply shadow-editorial-inner;
+  @apply transition-all duration-200;
+  @apply placeholder:text-muted-foreground;
+  @apply focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy;
+}
+
+/* Editorial cards */
+.card-editorial {
+  @apply bg-card border border-parchment rounded-sm;
+  @apply shadow-editorial;
+  @apply transition-all duration-300 ease-out;
+}
+.card-editorial:hover {
+  @apply shadow-editorial-md border-parchment-dark;
+}

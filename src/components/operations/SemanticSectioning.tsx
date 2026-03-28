@@ -1,0 +1,270 @@
+"use client";
+
+import { useState } from "react";
+import { Loader2, GitBranch } from "lucide-react";
+import { useSettings } from "@/context/SettingsContext";
+import { useEmbedAll } from "@/components/shared/useEmbedAll";
+import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
+import { cosineSimilarity } from "@/lib/geometry/cosine";
+import { SimilarityBridge } from "@/components/viz/SimilarityBridge";
+import { EMBEDDING_MODELS } from "@/types/embeddings";
+import { similarityColor } from "@/lib/similarity-scale";
+import { ResetButton } from "@/components/shared/ResetButton";
+
+interface InterpolationPoint {
+  position: number; // 0 to 1
+  vector: number[];
+  nearestConcept: string;
+  nearestSimilarity: number;
+}
+
+interface SectionResult {
+  anchorA: string;
+  anchorB: string;
+  anchorSimilarity: number;
+  modelId: string;
+  modelName: string;
+  path: InterpolationPoint[];
+}
+
+const DEFAULT_A = "solidarity";
+const DEFAULT_B = "compliance";
+const REFERENCE_CONCEPTS = [
+  "cooperation", "agreement", "conformity", "obedience", "submission",
+  "resistance", "loyalty", "duty", "consent", "coercion",
+  "unity", "harmony", "discipline", "deference", "acquiescence",
+  "alliance", "fellowship", "community", "order", "control",
+  "authority", "obligation", "commitment", "allegiance", "devotion",
+  "servitude", "subordination", "dependence", "trust", "hierarchy",
+];
+
+interface SemanticSectioningProps {
+  onQueryTime: (time: number) => void;
+}
+
+export function SemanticSectioning({ onQueryTime }: SemanticSectioningProps) {
+  const [anchorA, setAnchorA] = useState("");
+  const [anchorB, setAnchorB] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [results, setResults] = useState<SectionResult[]>([]);
+  const { getEnabledModels } = useSettings();
+  const embedAll = useEmbedAll();
+
+  const handleCompute = async (overrideA?: string, overrideB?: string) => {
+    const effectiveA = overrideA || anchorA.trim() || DEFAULT_A;
+    const effectiveB = overrideB || anchorB.trim() || DEFAULT_B;
+    if (!anchorA.trim() && !overrideA) setAnchorA(DEFAULT_A);
+    if (!anchorB.trim() && !overrideB) setAnchorB(DEFAULT_B);
+
+    setLoading(true);
+    setError(null);
+    const start = performance.now();
+
+    try {
+      // Embed anchors + reference concepts
+      const allTexts = [effectiveA, effectiveB, ...REFERENCE_CONCEPTS];
+      const modelVectors = await embedAll(allTexts);
+      const enabledModels = getEnabledModels();
+
+      const newResults: SectionResult[] = enabledModels
+        .filter(m => modelVectors.has(m.id))
+        .map(m => {
+          const vectors = modelVectors.get(m.id)!;
+          const vecA = vectors[0];
+          const vecB = vectors[1];
+          const refVectors = vectors.slice(2);
+
+          const anchorSim = cosineSimilarity(vecA, vecB);
+
+          // Interpolate between A and B in 20 steps
+          const steps = 20;
+          const path: InterpolationPoint[] = [];
+
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            // Linear interpolation in embedding space
+            const interpolated = vecA.map((a, d) => a * (1 - t) + vecB[d] * t);
+
+            // Find nearest reference concept
+            let bestIdx = 0;
+            let bestSim = -Infinity;
+            for (let r = 0; r < refVectors.length; r++) {
+              const sim = cosineSimilarity(interpolated, refVectors[r]);
+              if (sim > bestSim) { bestSim = sim; bestIdx = r; }
+            }
+
+            path.push({
+              position: t,
+              vector: interpolated,
+              nearestConcept: REFERENCE_CONCEPTS[bestIdx],
+              nearestSimilarity: bestSim,
+            });
+          }
+
+          const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
+          return {
+            anchorA: effectiveA,
+            anchorB: effectiveB,
+            anchorSimilarity: anchorSim,
+            modelId: m.id,
+            modelName: spec?.name || m.id,
+            path,
+          };
+        });
+
+      setResults(newResults);
+      onQueryTime((performance.now() - start) / 1000);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card-editorial p-6">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="font-display text-display-md font-bold">Semantic Sectioning</h2>
+          <ResetButton onReset={() => { setAnchorA(""); setAnchorB(""); setResults([]); setError(null); }} />
+        </div>
+        <p className="font-sans text-body-sm text-slate mb-4">
+          Where does one concept shade into another? This tool interpolates between two anchor
+          concepts in the embedding space and identifies what real concepts populate the boundary
+          region. The path reveals the manifold&apos;s implicit theory of how domains connect.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={anchorA}
+            onChange={e => setAnchorA(e.target.value)}
+            placeholder={DEFAULT_A}
+            className="input-editorial flex-1"
+            onKeyDown={e => e.key === "Enter" && handleCompute()}
+          />
+          <GitBranch size={20} className="text-slate flex-shrink-0" />
+          <input
+            type="text"
+            value={anchorB}
+            onChange={e => setAnchorB(e.target.value)}
+            placeholder={DEFAULT_B}
+            className="input-editorial flex-1"
+            onKeyDown={e => e.key === "Enter" && handleCompute()}
+          />
+          <button
+            onClick={() => handleCompute()}
+            disabled={loading}
+            className="btn-editorial-primary flex-shrink-0 disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : "Section"}
+          </button>
+        </div>
+      </div>
+
+      {error != null && <ErrorDisplay error={error} onRetry={() => handleCompute()} />}
+
+      {results.map(r => (
+        <div key={r.modelId} className="card-editorial overflow-hidden">
+          <div className="px-5 pt-5 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="font-sans text-body-sm font-semibold">{r.modelName}</span>
+            </div>
+          </div>
+
+          <div className="thin-rule mx-5" />
+
+          {/* Anchor distance */}
+          <div className="px-5 py-4">
+            <SimilarityBridge
+              nameA={r.anchorA}
+              nameB={r.anchorB}
+              similarity={r.anchorSimilarity}
+            />
+          </div>
+
+          <div className="thin-rule mx-5" />
+
+          {/* Path visualization */}
+          <div className="px-5 py-5">
+            <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+              Interpolation Path
+            </h4>
+            <p className="font-sans text-caption text-muted-foreground mb-4">
+              Moving through the embedding space from &ldquo;{r.anchorA}&rdquo; to &ldquo;{r.anchorB}&rdquo;.
+              At each point, the nearest real concept from the reference vocabulary is shown.
+              Watch where one domain shades into another.
+            </p>
+
+            {/* Path as a gradient bar with concept labels */}
+            <div className="relative">
+              {/* Gradient bar */}
+              <div className="flex h-10 rounded-sm overflow-hidden border border-parchment">
+                {r.path.map((point, i) => {
+                  const color = similarityColor(point.nearestSimilarity);
+                  return (
+                    <div
+                      key={i}
+                      className="flex-1 relative group"
+                      style={{ backgroundColor: `${color}20` }}
+                    >
+                      {/* Tooltip on hover */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
+                        <div className="bg-card border border-parchment shadow-editorial-md rounded-sm px-2 py-1 whitespace-nowrap">
+                          <div className="font-sans text-caption font-semibold">{point.nearestConcept}</div>
+                          <div className="font-sans text-[9px] text-muted-foreground tabular-nums">
+                            sim: {point.nearestSimilarity.toFixed(3)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Anchor labels */}
+              <div className="flex justify-between mt-1">
+                <span className="font-sans text-caption font-semibold text-foreground">{r.anchorA}</span>
+                <span className="font-sans text-caption font-semibold text-foreground">{r.anchorB}</span>
+              </div>
+            </div>
+
+            {/* Concept sequence */}
+            <div className="mt-4">
+              <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                Concept Sequence
+              </h4>
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="font-sans text-body-sm font-bold text-burgundy">{r.anchorA}</span>
+                {(() => {
+                  // Deduplicate consecutive concepts
+                  const sequence: string[] = [];
+                  let lastConcept = "";
+                  for (const point of r.path) {
+                    if (point.nearestConcept !== lastConcept && point.nearestConcept !== r.anchorA && point.nearestConcept !== r.anchorB) {
+                      sequence.push(point.nearestConcept);
+                      lastConcept = point.nearestConcept;
+                    }
+                  }
+                  return sequence.map((concept, i) => (
+                    <span key={i} className="flex items-center gap-1">
+                      <span className="text-muted-foreground">&rarr;</span>
+                      <span className="font-sans text-body-sm">{concept}</span>
+                    </span>
+                  ));
+                })()}
+                <span className="text-muted-foreground">&rarr;</span>
+                <span className="font-sans text-body-sm font-bold text-burgundy">{r.anchorB}</span>
+              </div>
+              <p className="font-sans text-caption text-muted-foreground mt-2 italic">
+                This is the manifold&apos;s path between these concepts. The sequence reveals
+                which intermediate meanings the geometry encodes, and where one domain
+                transitions into another.
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
