@@ -32,16 +32,25 @@ Measure how much context warps the manifold's positioning of a concept. Embed th
 
 ## Supported Embedding Providers
 
-| Provider | Models | API Key |
-|----------|--------|---------|
-| OpenAI | text-embedding-3-small (1536d), text-embedding-3-large (3072d) | Required |
-| Voyage AI (Anthropic) | voyage-3, voyage-3-large, voyage-3.5 (1024d) | Required |
-| Google Gemini | gemini-embedding-001 (3072d) | Required |
-| Cohere | embed-v3.0 (1024d) | Required |
-| Ollama (local) | nomic-embed-text, mxbai-embed-large, all-minilm | Not required |
-| OpenAI-compatible | Custom | Configurable |
+You only need to configure the providers you want to use. Enable one or more and ignore the rest.
 
-You only need API keys for the providers you want to use. If you are running Ollama locally, no API keys are required at all. You can use the tool entirely with local models and no external API calls.
+**Cloud providers** (require a free or paid API key from the provider):
+
+| Provider | Models | Sign up |
+|----------|--------|---------|
+| OpenAI | text-embedding-3-small (1536d), text-embedding-3-large (3072d) | [platform.openai.com](https://platform.openai.com/) |
+| Voyage AI (Anthropic) | voyage-3, voyage-3-large, voyage-3.5 (1024d) | [voyageai.com](https://www.voyageai.com/) |
+| Google Gemini | gemini-embedding-001 (3072d) | [ai.google.dev](https://ai.google.dev/) |
+| Cohere | embed-v3.0 (1024d) | [cohere.com](https://cohere.com/) |
+| OpenAI-compatible | Custom | Varies |
+
+**Local provider** (no API key, no account, runs entirely on your machine):
+
+| Provider | Models |
+|----------|--------|
+| Ollama | nomic-embed-text, mxbai-embed-large, all-minilm, or any embedding model you pull |
+
+To use Ollama, install it from [ollama.com](https://ollama.com/), pull an embedding model (`ollama pull nomic-embed-text`), and enable it in Settings. No API key needed. No data leaves your machine.
 
 ## Getting Started
 
