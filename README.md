@@ -38,15 +38,17 @@ Measure how much context warps the manifold's positioning of a concept. Embed th
 | Voyage AI (Anthropic) | voyage-3, voyage-3-large, voyage-3.5 (1024d) | Required |
 | Google Gemini | gemini-embedding-001 (3072d) | Required |
 | Cohere | embed-v3.0 (1024d) | Required |
-| Ollama (local) | nomic-embed-text, mxbai-embed-large, all-minilm | No (local) |
+| Ollama (local) | nomic-embed-text, mxbai-embed-large, all-minilm | Not required |
 | OpenAI-compatible | Custom | Configurable |
+
+You only need API keys for the providers you want to use. If you are running Ollama locally, no API keys are required at all. You can use the tool entirely with local models and no external API calls.
 
 ## Getting Started
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18 or later
-- At least one embedding provider API key, or [Ollama](https://ollama.com/) running locally
+- At least one of: an embedding provider API key (OpenAI, Voyage, Google, or Cohere), or [Ollama](https://ollama.com/) running locally with an embedding model pulled
 
 ### Install and Run
 
