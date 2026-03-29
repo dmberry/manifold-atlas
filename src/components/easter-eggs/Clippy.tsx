@@ -120,7 +120,6 @@ const MARX_MESSAGES = [
   "A commodity appears at first sight an extremely obvious, trivial thing. But its analysis brings out that it is a very strange thing, abounding in metaphysical subtleties and theological niceties.\n\n— Capital Vol. 1 (1867)",
   "There is a definite social relation between men that assumes, in their eyes, the fantastic form of a relation between things.\n\n— Capital Vol. 1 (1867)",
   "Perseus wore a cap of invisibility to pursue the monsters. We draw the cap of invisibility down over our own eyes and ears so as to be able to deny that monsters exist.\n\n— Capital Vol. 1, Preface (1867)",
-  "Labour in a white skin cannot emancipate itself where it is branded in a black skin.\n\n— Capital Vol. 1 (1867)",
   "The weapon of criticism cannot, of course, replace criticism of the weapon, material force must be overthrown by material force; but theory also becomes a material force as soon as it has gripped the masses.\n\n— A Contribution to the Critique of Hegel's Philosophy of Right (1843)",
   "To be radical is to grasp the root of the matter. But for man the root is man himself.\n\n— A Contribution to the Critique of Hegel's Philosophy of Right (1843)",
   "The less you eat, drink and buy books; the less you go to the theatre, the dance hall, the public house; the less you think, love, theorise, sing, paint, fence, etc., the more you save, the greater becomes your treasure which neither moths nor rust will devour, your capital.\n\n— Economic and Philosophic Manuscripts (1844)",
