@@ -418,6 +418,21 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                   x: points.map(p => p.x),
                   y: points.map(p => p.y),
                   text: points.map(p => p.concept),
+                  hovertext: (() => {
+                    const maxAbsX = Math.max(0.001, ...points.map(p => Math.abs(p.x)));
+                    const maxAbsY = Math.max(0.001, ...points.map(p => Math.abs(p.y)));
+                    return points.map(p => {
+                      const normX = p.x / maxAbsX;
+                      const normY = p.y / maxAbsY;
+                      return `<b>${p.concept}</b><br>` +
+                        `<br>${preset.xAxis.negative.label} ↔ ${preset.xAxis.positive.label}` +
+                        `<br>Normalised: ${normX >= 0 ? "+" : ""}${normX.toFixed(2)}  Raw: ${p.x >= 0 ? "+" : ""}${p.x.toFixed(4)}` +
+                        `<br>` +
+                        `<br>${preset.yAxis.negative.label} ↔ ${preset.yAxis.positive.label}` +
+                        `<br>Normalised: ${normY >= 0 ? "+" : ""}${normY.toFixed(2)}  Raw: ${p.y >= 0 ? "+" : ""}${p.y.toFixed(4)}`;
+                    });
+                  })(),
+                  hoverinfo: "text",
                   mode: "markers+text",
                   type: "scatter",
                   textposition: "top center",
@@ -427,7 +442,6 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                     color: isDark ? "rgba(210,160,60,0.9)" : "rgba(160,110,20,0.9)",
                     line: { color: isDark ? "rgba(210,160,60,0.3)" : "rgba(160,110,20,0.3)", width: 2 },
                   },
-                  hoverinfo: "text",
                 },
               ]}
               layout={(() => {
