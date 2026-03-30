@@ -11,7 +11,7 @@ interface SettingsContextType {
   updateProvider: (id: EmbeddingProviderId, updates: Partial<ProviderSettings>) => void;
   toggleDarkMode: () => void;
   setNegationThreshold: (threshold: number) => void;
-  setPrimaryModel: (modelId: string | null) => void;
+  setRankedModels: (ranked: string[]) => void;
   getEnabledModels: () => Array<EmbeddingModelSpec & { apiKey: string; baseUrl?: string }>;
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
@@ -90,8 +90,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, negationThreshold: threshold }));
   }, []);
 
-  const setPrimaryModel = useCallback((modelId: string | null) => {
-    setSettings(prev => ({ ...prev, primaryModel: modelId }));
+  const setRankedModels = useCallback((ranked: string[]) => {
+    setSettings(prev => ({ ...prev, rankedModels: ranked }));
   }, []);
 
   const getEnabledModels = useCallback(() => {
@@ -122,10 +122,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-    // If a primary model is set, filter to just that model
-    if (settings.primaryModel) {
-      const primary = results.find(m => m.id === settings.primaryModel);
-      if (primary) return [primary];
+    // If ranked models are set, return only those in rank order
+    if (settings.rankedModels && settings.rankedModels.length > 0) {
+      const ranked = settings.rankedModels
+        .map(id => results.find(m => m.id === id))
+        .filter((m): m is NonNullable<typeof m> => m !== undefined);
+      if (ranked.length > 0) return ranked;
     }
     return results;
   }, [settings]);
@@ -137,7 +139,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         updateProvider,
         toggleDarkMode,
         setNegationThreshold,
-        setPrimaryModel,
+        setRankedModels,
         getEnabledModels,
         settingsOpen,
         setSettingsOpen,

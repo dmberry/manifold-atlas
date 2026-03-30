@@ -11,13 +11,13 @@ export interface ProviderSettings {
 
 export interface AppSettings {
   providers: Record<EmbeddingProviderId, ProviderSettings>;
-  primaryModel: string | null; // model ID of the primary/default model, null = use all
+  rankedModels: string[]; // ordered model IDs: [0] = primary, [1] = secondary, etc. Empty = use all
   darkMode: boolean;
   negationThreshold: number; // default 0.92
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  primaryModel: null,
+  rankedModels: [],
   providers: {
     openai: {
       enabled: false,
