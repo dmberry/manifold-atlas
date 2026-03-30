@@ -11,7 +11,7 @@ import { EMBEDDING_MODELS } from "@/types/embeddings";
 import { similarityColor } from "@/lib/similarity-scale";
 
 const PRESETS = [
-  { a: "king", b: "queen", c: "man", label: "king:queen :: man:?" },
+  { a: "man", b: "king", c: "woman", label: "king - man + woman = ? (classic word2vec)" },
   { a: "capitalism", b: "exploitation", c: "cooperation", label: "capitalism - exploitation + cooperation = ?" },
   { a: "democracy", b: "participation", c: "authoritarianism", label: "democracy - participation + authoritarianism = ?" },
   { a: "science", b: "objectivity", c: "art", label: "science - objectivity + art = ?" },
@@ -63,9 +63,9 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
   const embedAll = useEmbedAll();
 
   const handleCompute = async (overrideA?: string, overrideB?: string, overrideC?: string) => {
-    const a = overrideA || termA.trim() || "king";
-    const b = overrideB || termB.trim() || "queen";
-    const c = overrideC || termC.trim() || "man";
+    const a = overrideA || termA.trim() || "man";
+    const b = overrideB || termB.trim() || "king";
+    const c = overrideC || termC.trim() || "woman";
     if (!termA.trim() && !overrideA) setTermA(a);
     if (!termB.trim() && !overrideB) setTermB(b);
     if (!termC.trim() && !overrideC) setTermC(c);
@@ -159,7 +159,7 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
                 type="text"
                 value={termA}
                 onChange={e => setTermA(e.target.value)}
-                placeholder="king"
+                placeholder="man"
                 className="input-editorial text-body-sm"
               />
             </div>
@@ -169,7 +169,7 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
                 type="text"
                 value={termB}
                 onChange={e => setTermB(e.target.value)}
-                placeholder="queen"
+                placeholder="king"
                 className="input-editorial text-body-sm"
               />
             </div>
@@ -179,7 +179,7 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
                 type="text"
                 value={termC}
                 onChange={e => setTermC(e.target.value)}
-                placeholder="man"
+                placeholder="woman"
                 className="input-editorial text-body-sm"
               />
             </div>
