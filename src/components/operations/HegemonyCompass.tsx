@@ -1,55 +1,73 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { Loader2, Plus } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { cosineSimilarity } from "@/lib/geometry/cosine";
-import { SimilarityBridge } from "@/components/viz/SimilarityBridge";
 import { ResetButton } from "@/components/shared/ResetButton";
 import { EMBEDDING_MODELS } from "@/types/embeddings";
 
-const PRESETS: Record<string, { concept: string; clusterA: { name: string; terms: string[] }; clusterB: { name: string; terms: string[] } }> = {
-  Freedom: {
-    concept: "freedom",
-    clusterA: { name: "Market liberalism", terms: ["market", "choice", "consumer", "individual", "property", "competition", "enterprise", "deregulation"] },
-    clusterB: { name: "Emancipatory politics", terms: ["liberation", "solidarity", "collective", "emancipation", "resistance", "justice", "equality", "self-determination"] },
+const PlotlyPlot = dynamic(
+  () => import("@/components/viz/PlotlyPlot").then(mod => ({ default: mod.PlotlyPlot })),
+  { ssr: false, loading: () => <div className="h-[500px] flex items-center justify-center bg-card text-slate text-body-sm">Loading compass...</div> }
+);
+
+interface CompassAxis {
+  negative: { label: string; terms: string[] }; // left / bottom
+  positive: { label: string; terms: string[] }; // right / top
+}
+
+interface CompassPreset {
+  name: string;
+  xAxis: CompassAxis;
+  yAxis: CompassAxis;
+}
+
+const PRESETS: Record<string, CompassPreset> = {
+  "Political Compass": {
+    name: "Political Compass",
+    xAxis: {
+      negative: { label: "Economic Left", terms: ["redistribution", "collective ownership", "welfare state", "public services", "labour rights", "regulation", "equality", "solidarity", "commons"] },
+      positive: { label: "Economic Right", terms: ["free market", "privatisation", "deregulation", "individual enterprise", "competition", "property rights", "profit", "austerity", "shareholder value"] },
+    },
+    yAxis: {
+      negative: { label: "Libertarian", terms: ["individual freedom", "civil liberties", "autonomy", "decentralisation", "privacy", "voluntary association", "self-determination", "tolerance", "pluralism"] },
+      positive: { label: "Authoritarian", terms: ["state authority", "social order", "hierarchy", "discipline", "obedience", "tradition", "security", "national identity", "conformity"] },
+    },
   },
-  Democracy: {
-    concept: "democracy",
-    clusterA: { name: "Liberal proceduralism", terms: ["election", "voting", "representation", "constitution", "institution", "parliament", "rule of law", "governance"] },
-    clusterB: { name: "Radical democracy", terms: ["participation", "assembly", "commons", "deliberation", "direct action", "autonomy", "popular sovereignty", "grassroots"] },
+  "Technology Compass": {
+    name: "Technology Compass",
+    xAxis: {
+      negative: { label: "Commons", terms: ["open source", "public knowledge", "commons", "collective intelligence", "shared infrastructure", "community ownership", "transparency", "interoperability"] },
+      positive: { label: "Proprietary", terms: ["intellectual property", "trade secret", "vendor lock-in", "platform monopoly", "proprietary data", "closed source", "subscription model", "walled garden"] },
+    },
+    yAxis: {
+      negative: { label: "Human-centred", terms: ["human agency", "dignity", "consent", "accountability", "explainability", "care", "participation", "embodiment"] },
+      positive: { label: "Techno-solutionist", terms: ["automation", "optimisation", "efficiency", "scale", "disruption", "acceleration", "artificial intelligence", "algorithmic governance"] },
+    },
   },
-  Intelligence: {
-    concept: "intelligence",
-    clusterA: { name: "Techno-rationalism", terms: ["computation", "optimisation", "efficiency", "data", "algorithm", "performance", "metric", "automation"] },
-    clusterB: { name: "Embodied cognition", terms: ["understanding", "wisdom", "judgement", "intuition", "consciousness", "experience", "care", "attentiveness"] },
-  },
-  Security: {
-    concept: "security",
-    clusterA: { name: "State/military", terms: ["surveillance", "border", "police", "defence", "threat", "control", "enforcement", "intelligence"] },
-    clusterB: { name: "Human security", terms: ["shelter", "food", "health", "dignity", "community", "belonging", "trust", "wellbeing"] },
-  },
-  Progress: {
-    concept: "progress",
-    clusterA: { name: "Techno-capitalism", terms: ["growth", "innovation", "disruption", "scaling", "productivity", "acceleration", "development", "modernisation"] },
-    clusterB: { name: "Social justice", terms: ["equality", "redistribution", "reparation", "sustainability", "solidarity", "dignity", "sufficiency", "care"] },
+  "Knowledge Compass": {
+    name: "Knowledge Compass",
+    xAxis: {
+      negative: { label: "Critical", terms: ["ideology critique", "power analysis", "deconstruction", "situated knowledge", "reflexivity", "emancipation", "dialectics", "historicism"] },
+      positive: { label: "Positivist", terms: ["objectivity", "measurement", "replication", "hypothesis testing", "empirical evidence", "quantification", "prediction", "falsification"] },
+    },
+    yAxis: {
+      negative: { label: "Particular", terms: ["local knowledge", "indigenous knowledge", "lived experience", "case study", "ethnography", "phenomenology", "narrative", "context"] },
+      positive: { label: "Universal", terms: ["generalisation", "law", "theory", "abstraction", "model", "formal system", "axiom", "universality"] },
+    },
   },
 };
 
-interface CompassResult {
+interface PlottedConcept {
   concept: string;
-  clusterAName: string;
-  clusterBName: string;
-  models: Array<{
-    modelId: string;
-    modelName: string;
-    simToA: number;
-    simToB: number;
-    bias: number; // positive = closer to A, negative = closer to B
-    biasLabel: string;
-  }>;
+  x: number; // position on x-axis (-1 to +1)
+  y: number; // position on y-axis (-1 to +1)
+  modelId: string;
+  modelName: string;
 }
 
 interface HegemonyCompassProps {
@@ -57,81 +75,75 @@ interface HegemonyCompassProps {
 }
 
 export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
-  const [selectedPreset, setSelectedPreset] = useState("Freedom");
-  const [customConcept, setCustomConcept] = useState("");
-  const [customA, setCustomA] = useState("");
-  const [customB, setCustomB] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState("Political Compass");
+  const [conceptInput, setConceptInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [result, setResult] = useState<CompassResult | null>(null);
-  const { getEnabledModels } = useSettings();
+  const [plottedConcepts, setPlottedConcepts] = useState<PlottedConcept[]>([]);
+  const { settings, getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
+  const isDark = settings.darkMode;
 
-  const handleCompute = async () => {
-    let concept: string;
-    let clusterATerms: string[];
-    let clusterBTerms: string[];
-    let clusterAName: string;
-    let clusterBName: string;
+  const preset = PRESETS[selectedPreset];
 
-    if (selectedPreset === "custom") {
-      concept = customConcept.trim();
-      clusterATerms = customA.split(",").map(s => s.trim()).filter(s => s);
-      clusterBTerms = customB.split(",").map(s => s.trim()).filter(s => s);
-      clusterAName = "Cluster A";
-      clusterBName = "Cluster B";
-      if (!concept || clusterATerms.length === 0 || clusterBTerms.length === 0) return;
-    } else {
-      const preset = PRESETS[selectedPreset];
-      concept = preset.concept;
-      clusterATerms = preset.clusterA.terms;
-      clusterBTerms = preset.clusterB.terms;
-      clusterAName = preset.clusterA.name;
-      clusterBName = preset.clusterB.name;
-    }
+  const handleAddConcept = async () => {
+    const concept = conceptInput.trim();
+    if (!concept) return;
 
     setLoading(true);
     setError(null);
     const start = performance.now();
 
     try {
-      const allTexts = [concept, ...clusterATerms, ...clusterBTerms];
+      // Embed the concept + all axis terms
+      const allAxisTerms = [
+        ...preset.xAxis.negative.terms,
+        ...preset.xAxis.positive.terms,
+        ...preset.yAxis.negative.terms,
+        ...preset.yAxis.positive.terms,
+      ];
+      const allTexts = [concept, ...allAxisTerms];
       const modelVectors = await embedAll(allTexts);
       const enabledModels = getEnabledModels();
 
-      const models = enabledModels
+      const xNegCount = preset.xAxis.negative.terms.length;
+      const xPosCount = preset.xAxis.positive.terms.length;
+      const yNegCount = preset.yAxis.negative.terms.length;
+
+      const newPoints: PlottedConcept[] = enabledModels
         .filter(m => modelVectors.has(m.id))
         .map(m => {
           const vectors = modelVectors.get(m.id)!;
           const conceptVec = vectors[0];
-          const aVecs = vectors.slice(1, 1 + clusterATerms.length);
-          const bVecs = vectors.slice(1 + clusterATerms.length);
 
-          const avgSimA = aVecs.reduce((sum, v) => sum + cosineSimilarity(conceptVec, v), 0) / aVecs.length;
-          const avgSimB = bVecs.reduce((sum, v) => sum + cosineSimilarity(conceptVec, v), 0) / bVecs.length;
-          const bias = avgSimA - avgSimB;
+          // Compute avg similarity to each pole
+          let offset = 1;
+          const xNegVecs = vectors.slice(offset, offset + xNegCount); offset += xNegCount;
+          const xPosVecs = vectors.slice(offset, offset + xPosCount); offset += xPosCount;
+          const yNegVecs = vectors.slice(offset, offset + yNegCount); offset += yNegCount;
+          const yPosVecs = vectors.slice(offset);
 
-          let biasLabel: string;
-          if (Math.abs(bias) < 0.01) biasLabel = "Evenly positioned";
-          else if (bias > 0.05) biasLabel = `Strong pull toward ${clusterAName}`;
-          else if (bias > 0.02) biasLabel = `Leans toward ${clusterAName}`;
-          else if (bias > 0) biasLabel = `Slight lean toward ${clusterAName}`;
-          else if (bias < -0.05) biasLabel = `Strong pull toward ${clusterBName}`;
-          else if (bias < -0.02) biasLabel = `Leans toward ${clusterBName}`;
-          else biasLabel = `Slight lean toward ${clusterBName}`;
+          const avgSimXNeg = xNegVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / xNegVecs.length;
+          const avgSimXPos = xPosVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / xPosVecs.length;
+          const avgSimYNeg = yNegVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / yNegVecs.length;
+          const avgSimYPos = yPosVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / yPosVecs.length;
+
+          // Position: difference in similarity (positive = closer to positive pole)
+          const x = avgSimXPos - avgSimXNeg;
+          const y = avgSimYPos - avgSimYNeg;
 
           const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
           return {
+            concept,
+            x,
+            y,
             modelId: m.id,
             modelName: spec?.name || m.id,
-            simToA: avgSimA,
-            simToB: avgSimB,
-            bias,
-            biasLabel,
           };
         });
 
-      setResult({ concept, clusterAName, clusterBName, models });
+      setPlottedConcepts(prev => [...prev, ...newPoints]);
+      setConceptInput("");
       onQueryTime((performance.now() - start) / 1000);
     } catch (e) {
       setError(e);
@@ -140,169 +152,165 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
     }
   };
 
+  // Group by model for rendering
+  const modelGroups = useMemo(() => {
+    const groups = new Map<string, { modelName: string; points: PlottedConcept[] }>();
+    for (const pt of plottedConcepts) {
+      if (!groups.has(pt.modelId)) {
+        groups.set(pt.modelId, { modelName: pt.modelName, points: [] });
+      }
+      groups.get(pt.modelId)!.points.push(pt);
+    }
+    return groups;
+  }, [plottedConcepts]);
+
+  const bgColor = isDark ? "#0a0a1a" : "#f5f2ec";
+  const gridColor = isDark ? "rgba(100,100,140,0.3)" : "rgba(140,130,110,0.35)";
+  const textColor = isDark ? "rgba(200,200,220,0.8)" : "rgba(80,70,60,0.8)";
+
   return (
     <div className="space-y-6">
       <div className="card-editorial p-6">
         <div className="flex items-start justify-between mb-1">
           <h2 className="font-display text-display-md font-bold">Hegemony Compass</h2>
-          <ResetButton onReset={() => { setResult(null); setError(null); setCustomConcept(""); setCustomA(""); setCustomB(""); }} />
+          <ResetButton onReset={() => { setPlottedConcepts([]); setConceptInput(""); setError(null); }} />
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
-          Place a contested concept between two competing ideological clusters and measure
-          which side the manifold pulls it toward. The result reveals which framing the
-          geometry has naturalised as the default meaning.
+          A four-pole compass that plots where the manifold positions contested concepts.
+          Each concept you add appears as a point on the diagram. Points accumulate until
+          you reset, building a map of ideological positioning in the geometry.
         </p>
 
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <label className="font-sans text-body-sm text-slate">Test:</label>
+            <label className="font-sans text-body-sm text-slate">Compass:</label>
             <select
               value={selectedPreset}
-              onChange={e => setSelectedPreset(e.target.value)}
+              onChange={e => { setSelectedPreset(e.target.value); setPlottedConcepts([]); }}
               className="input-editorial w-auto py-1.5 px-3 text-body-sm"
             >
               {Object.keys(PRESETS).map(name => (
                 <option key={name} value={name}>{name}</option>
               ))}
-              <option value="custom">Custom</option>
             </select>
           </div>
 
-          {selectedPreset === "custom" && (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={customConcept}
-                onChange={e => setCustomConcept(e.target.value)}
-                placeholder="Contested concept, e.g. freedom"
-                className="input-editorial text-body-sm"
-              />
-              <input
-                type="text"
-                value={customA}
-                onChange={e => setCustomA(e.target.value)}
-                placeholder="Cluster A terms (comma separated)"
-                className="input-editorial text-body-sm"
-              />
-              <input
-                type="text"
-                value={customB}
-                onChange={e => setCustomB(e.target.value)}
-                placeholder="Cluster B terms (comma separated)"
-                className="input-editorial text-body-sm"
-              />
-            </div>
-          )}
-
-          {selectedPreset !== "custom" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-muted rounded-sm p-3">
-                <div className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-1">
-                  {PRESETS[selectedPreset].clusterA.name}
-                </div>
-                <p className="font-sans text-caption text-muted-foreground">
-                  {PRESETS[selectedPreset].clusterA.terms.join(", ")}
-                </p>
-              </div>
-              <div className="bg-muted rounded-sm p-3">
-                <div className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-1">
-                  {PRESETS[selectedPreset].clusterB.name}
-                </div>
-                <p className="font-sans text-caption text-muted-foreground">
-                  {PRESETS[selectedPreset].clusterB.terms.join(", ")}
-                </p>
+          {/* Axis labels */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-muted rounded-sm p-2">
+              <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                X-axis: {preset.xAxis.negative.label} &harr; {preset.xAxis.positive.label}
               </div>
             </div>
-          )}
+            <div className="bg-muted rounded-sm p-2">
+              <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                Y-axis: {preset.yAxis.negative.label} &harr; {preset.yAxis.positive.label}
+              </div>
+            </div>
+          </div>
 
-          <div className="flex justify-end">
+          {/* Concept input */}
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={conceptInput}
+              onChange={e => setConceptInput(e.target.value)}
+              placeholder="Enter a concept to plot, e.g. freedom, justice, efficiency"
+              className="input-editorial flex-1"
+              onKeyDown={e => e.key === "Enter" && handleAddConcept()}
+            />
             <button
-              onClick={handleCompute}
-              disabled={loading}
+              onClick={handleAddConcept}
+              disabled={loading || !conceptInput.trim()}
               className="btn-editorial-primary disabled:opacity-50"
             >
-              {loading ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-              Measure
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <><Plus size={16} className="mr-1" />Plot</>}
             </button>
           </div>
+
+          {plottedConcepts.length > 0 && (
+            <p className="font-sans text-caption text-muted-foreground">
+              {new Set(plottedConcepts.map(p => p.concept)).size} concept{new Set(plottedConcepts.map(p => p.concept)).size !== 1 ? "s" : ""} plotted.
+              Add more or reset to start over.
+            </p>
+          )}
         </div>
       </div>
 
-      {error != null && <ErrorDisplay error={error} onRetry={handleCompute} />}
+      {error != null && <ErrorDisplay error={error} onRetry={handleAddConcept} />}
 
-      {result && result.models.map(m => (
-        <div key={m.modelId} className="card-editorial overflow-hidden">
+      {/* Compass plots per model */}
+      {[...modelGroups.entries()].map(([modelId, { modelName, points }]) => (
+        <div key={modelId} className="card-editorial overflow-hidden">
           <div className="px-5 pt-5 pb-3">
-            <span className="font-sans text-body-sm font-semibold">{m.modelName}</span>
+            <span className="font-sans text-body-sm font-semibold">{modelName}</span>
           </div>
-
           <div className="thin-rule mx-5" />
-
-          {/* Visual compass */}
-          <div className="px-5 py-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-sans text-caption font-semibold uppercase tracking-wider text-muted-foreground">
-                {result.clusterAName}
-              </span>
-              <span className="font-sans text-caption font-semibold uppercase tracking-wider text-muted-foreground">
-                {result.clusterBName}
-              </span>
-            </div>
-
-            {/* Compass bar */}
-            <div className="relative h-4 bg-muted rounded-full mb-2">
-              {/* Centre line */}
-              <div className="absolute left-1/2 top-0 w-px h-full bg-parchment-dark" />
-              {/* Marker */}
-              {(() => {
-                // Map bias to position: -0.1 = far right, +0.1 = far left
-                const maxBias = 0.1;
-                const normalised = Math.max(-1, Math.min(1, m.bias / maxBias));
-                const pct = 50 + normalised * 40; // 10% to 90%
-                return (
-                  <div
-                    className="absolute top-[-2px] w-5 h-5 rounded-full bg-burgundy border-2 border-card shadow-editorial"
-                    style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
-                  />
-                );
-              })()}
-            </div>
-
-            {/* Similarity scores */}
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="bg-muted rounded-sm p-2.5">
-                <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Avg similarity to {result.clusterAName}
-                </div>
-                <div className="font-sans text-body-sm font-bold tabular-nums mt-0.5">
-                  {m.simToA.toFixed(4)}
-                </div>
-              </div>
-              <div className="bg-muted rounded-sm p-2.5">
-                <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Avg similarity to {result.clusterBName}
-                </div>
-                <div className="font-sans text-body-sm font-bold tabular-nums mt-0.5">
-                  {m.simToB.toFixed(4)}
-                </div>
-              </div>
-            </div>
+          <div className="px-2 py-2" style={{ background: bgColor }}>
+            <PlotlyPlot
+              data={[
+                {
+                  x: points.map(p => p.x),
+                  y: points.map(p => p.y),
+                  text: points.map(p => p.concept),
+                  mode: "markers+text",
+                  type: "scatter",
+                  textposition: "top center",
+                  textfont: { size: 12, family: "Inter, system-ui, sans-serif", color: textColor },
+                  marker: {
+                    size: 10,
+                    color: isDark ? "rgba(210,160,60,0.9)" : "rgba(160,110,20,0.9)",
+                    line: { color: isDark ? "rgba(210,160,60,0.3)" : "rgba(160,110,20,0.3)", width: 2 },
+                  },
+                  hoverinfo: "text",
+                },
+              ]}
+              layout={{
+                height: 520,
+                margin: { t: 40, r: 60, b: 60, l: 60 },
+                paper_bgcolor: bgColor,
+                plot_bgcolor: bgColor,
+                xaxis: {
+                  zeroline: true,
+                  zerolinecolor: isDark ? "rgba(200,200,220,0.6)" : "rgba(30,30,30,0.7)",
+                  zerolinewidth: 2,
+                  showgrid: true,
+                  gridcolor: gridColor,
+                  showticklabels: false,
+                  range: [-0.15, 0.15],
+                  title: { text: `← ${preset.xAxis.negative.label}          ${preset.xAxis.positive.label} →`, font: { size: 12, color: textColor } },
+                },
+                yaxis: {
+                  zeroline: true,
+                  zerolinecolor: isDark ? "rgba(200,200,220,0.6)" : "rgba(30,30,30,0.7)",
+                  zerolinewidth: 2,
+                  showgrid: true,
+                  gridcolor: gridColor,
+                  showticklabels: false,
+                  range: [-0.15, 0.15],
+                  title: { text: `← ${preset.yAxis.negative.label}          ${preset.yAxis.positive.label} →`, font: { size: 12, color: textColor } },
+                },
+                showlegend: false,
+                // Coloured quadrants
+                shapes: [
+                  // Top-left (red): negative-x, positive-y
+                  { type: "rect", x0: -0.15, x1: 0, y0: 0, y1: 0.15, fillcolor: isDark ? "rgba(220,80,80,0.12)" : "rgba(220,80,80,0.15)", line: { width: 0 }, layer: "below" },
+                  // Top-right (blue): positive-x, positive-y
+                  { type: "rect", x0: 0, x1: 0.15, y0: 0, y1: 0.15, fillcolor: isDark ? "rgba(80,120,220,0.12)" : "rgba(80,120,220,0.15)", line: { width: 0 }, layer: "below" },
+                  // Bottom-left (green): negative-x, negative-y
+                  { type: "rect", x0: -0.15, x1: 0, y0: -0.15, y1: 0, fillcolor: isDark ? "rgba(80,200,80,0.12)" : "rgba(80,200,80,0.15)", line: { width: 0 }, layer: "below" },
+                  // Bottom-right (purple): positive-x, negative-y
+                  { type: "rect", x0: 0, x1: 0.15, y0: -0.15, y1: 0, fillcolor: isDark ? "rgba(160,80,200,0.12)" : "rgba(160,80,200,0.15)", line: { width: 0 }, layer: "below" },
+                ],
+              }}
+              config={{ displayModeBar: false, responsive: true }}
+              style={{ width: "100%", height: "500px" }}
+            />
           </div>
-
-          <div className="thin-rule mx-5" />
-
-          {/* Interpretation */}
-          <div className="px-5 py-5">
-            <p className="font-sans text-body-sm font-semibold" style={{ color: Math.abs(m.bias) > 0.02 ? "#ea580c" : "#16a34a" }}>
-              {m.biasLabel}
-            </p>
-            <p className="font-sans text-body-sm text-slate mt-2">
-              The manifold positions &ldquo;{result.concept}&rdquo; {m.bias > 0.02
-                ? `closer to the ${result.clusterAName} cluster. This framing is the geometry's default: what "${result.concept}" means, before any context is supplied, is already tilted toward this ideological position.`
-                : m.bias < -0.02
-                  ? `closer to the ${result.clusterBName} cluster. This framing is the geometry's default.`
-                  : `roughly equidistant between the two clusters. The contested meaning remains genuinely open in this geometry.`
-              }
+          <div className="px-5 py-3">
+            <p className="font-sans text-caption text-muted-foreground italic text-center">
+              Position = difference in average cosine similarity between opposing pole clusters.
+              Centre = equidistant from both poles on that axis.
             </p>
           </div>
         </div>
