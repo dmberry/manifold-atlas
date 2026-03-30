@@ -1,6 +1,7 @@
 "use client";
 
-import { X, Check, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { X, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbeddingCache } from "@/context/EmbeddingCacheContext";
 import { EMBEDDING_PROVIDERS, type EmbeddingProviderId } from "@/types/embeddings";
@@ -8,6 +9,16 @@ import { EMBEDDING_PROVIDERS, type EmbeddingProviderId } from "@/types/embedding
 export function SettingsPanel() {
   const { settings, settingsOpen, setSettingsOpen, updateProvider } = useSettings();
   const { cacheSize, clearCache } = useEmbeddingCache();
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+
+  const toggleKeyVisibility = (pid: string) => {
+    setVisibleKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(pid)) next.delete(pid);
+      else next.add(pid);
+      return next;
+    });
+  };
 
   if (!settingsOpen) return null;
 
@@ -69,13 +80,23 @@ export function SettingsPanel() {
                           <label className="block font-sans text-caption text-slate mb-1">
                             API Key
                           </label>
-                          <input
-                            type="password"
-                            value={provSettings.apiKey}
-                            onChange={e => updateProvider(pid, { apiKey: e.target.value })}
-                            placeholder={`Enter ${provider.name} API key`}
-                            className="input-editorial text-body-sm py-2"
-                          />
+                          <div className="relative">
+                            <input
+                              type={visibleKeys.has(pid) ? "text" : "password"}
+                              value={provSettings.apiKey}
+                              onChange={e => updateProvider(pid, { apiKey: e.target.value })}
+                              placeholder={`Enter ${provider.name} API key`}
+                              className="input-editorial text-body-sm py-2 pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleKeyVisibility(pid)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                              title={visibleKeys.has(pid) ? "Hide API key" : "Show API key"}
+                            >
+                              {visibleKeys.has(pid) ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
                         </div>
                       )}
 
