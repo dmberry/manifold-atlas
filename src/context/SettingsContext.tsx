@@ -11,6 +11,7 @@ interface SettingsContextType {
   updateProvider: (id: EmbeddingProviderId, updates: Partial<ProviderSettings>) => void;
   toggleDarkMode: () => void;
   setNegationThreshold: (threshold: number) => void;
+  setPrimaryModel: (modelId: string | null) => void;
   getEnabledModels: () => Array<EmbeddingModelSpec & { apiKey: string; baseUrl?: string }>;
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
@@ -89,6 +90,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, negationThreshold: threshold }));
   }, []);
 
+  const setPrimaryModel = useCallback((modelId: string | null) => {
+    setSettings(prev => ({ ...prev, primaryModel: modelId }));
+  }, []);
+
   const getEnabledModels = useCallback(() => {
     const results: Array<EmbeddingModelSpec & { apiKey: string; baseUrl?: string }> = [];
     for (const [providerId, providerSettings] of Object.entries(settings.providers)) {
@@ -117,6 +122,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
+    // If a primary model is set, filter to just that model
+    if (settings.primaryModel) {
+      const primary = results.find(m => m.id === settings.primaryModel);
+      if (primary) return [primary];
+    }
     return results;
   }, [settings]);
 
@@ -127,6 +137,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         updateProvider,
         toggleDarkMode,
         setNegationThreshold,
+        setPrimaryModel,
         getEnabledModels,
         settingsOpen,
         setSettingsOpen,

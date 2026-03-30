@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check, Circle } from "lucide-react";
+import { ChevronDown, Check, Circle, Star } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { EMBEDDING_PROVIDERS, EMBEDDING_MODELS, type EmbeddingProviderId } from "@/types/embeddings";
 
 export function ProviderSelector() {
-  const { settings, updateProvider } = useSettings();
+  const { settings, updateProvider, setPrimaryModel } = useSettings();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -39,11 +39,17 @@ export function ProviderSelector() {
     }
   }
 
+  const primaryModel = settings.primaryModel
+    ? enabledModels.find(m => m.modelId === settings.primaryModel)
+    : null;
+
   const label = enabledModels.length === 0
     ? "No models"
-    : enabledModels.length === 1
-      ? enabledModels[0].modelName
-      : `${enabledModels.length} models`;
+    : primaryModel
+      ? primaryModel.modelName
+      : enabledModels.length === 1
+        ? enabledModels[0].modelName
+        : `${enabledModels.length} models`;
 
   return (
     <div ref={ref} className="relative">
@@ -79,21 +85,16 @@ export function ProviderSelector() {
                     <span className="font-sans text-caption font-semibold text-foreground">
                       {provider.name}
                     </span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ps.enabled}
-                        onChange={e => updateProvider(pid, { enabled: e.target.checked })}
-                        className="sr-only peer"
+                    <button
+                      onClick={() => updateProvider(pid, { enabled: !ps.enabled })}
+                      className={`relative w-8 h-[18px] rounded-full transition-colors ${ps.enabled ? "bg-burgundy" : "bg-parchment-dark"}`}
+                    >
+                      <span
+                        className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${
+                          ps.enabled ? "left-[16px]" : "left-[2px]"
+                        }`}
                       />
-                      <div className="w-7 h-4 bg-parchment-dark rounded-full peer peer-checked:bg-burgundy transition-colors">
-                        <div
-                          className={`w-3 h-3 mt-0.5 rounded-full bg-white shadow transition-transform ${
-                            ps.enabled ? "translate-x-3.5 ml-[14px]" : "ml-0.5"
-                          }`}
-                        />
-                      </div>
-                    </label>
+                    </button>
                   </div>
 
                   {ps.enabled && (
@@ -101,25 +102,46 @@ export function ProviderSelector() {
                       {provider.models.map(model => {
                         const isSelected = ps.selectedModels.includes(model.id);
                         return (
-                          <label
-                            key={model.id}
-                            className="flex items-center gap-1.5 cursor-pointer py-0.5"
-                            onClick={() => {
+                          <div key={model.id} className="flex items-center gap-1 py-0.5">
+                            {/* Checkbox: include in queries */}
+                            <div
+                              className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors cursor-pointer ${
+                                isSelected
+                                  ? "bg-burgundy border-burgundy text-white"
+                                  : "border-parchment-dark"
+                              }`}
+                              onClick={() => {
+                                const selected = isSelected
+                                  ? ps.selectedModels.filter(m => m !== model.id)
+                                  : [...ps.selectedModels, model.id];
+                                updateProvider(pid, { selectedModels: selected });
+                              }}
+                            >
+                              {isSelected && <Check size={10} />}
+                            </div>
+                            <span className="font-sans text-caption flex-1 cursor-pointer" onClick={() => {
                               const selected = isSelected
                                 ? ps.selectedModels.filter(m => m !== model.id)
                                 : [...ps.selectedModels, model.id];
                               updateProvider(pid, { selectedModels: selected });
-                            }}
-                          >
-                            <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors ${
-                              isSelected
-                                ? "bg-burgundy border-burgundy text-white"
-                                : "border-parchment-dark"
-                            }`}>
-                              {isSelected && <Check size={10} />}
-                            </div>
-                            <span className="font-sans text-caption">{model.name}</span>
-                          </label>
+                            }}>{model.name}</span>
+                            {/* Star: set as default */}
+                            {isSelected && (
+                              <button
+                                onClick={() => setPrimaryModel(settings.primaryModel === model.id ? null : model.id)}
+                                className="p-0.5"
+                                title={settings.primaryModel === model.id ? "Remove as default (use all)" : "Set as default model"}
+                              >
+                                <Star
+                                  size={12}
+                                  className={settings.primaryModel === model.id
+                                    ? "fill-gold text-gold"
+                                    : "text-parchment-dark hover:text-gold transition-colors"
+                                  }
+                                />
+                              </button>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -133,6 +155,12 @@ export function ProviderSelector() {
                 </div>
               );
             })}
+          </div>
+          <div className="px-3 py-2 border-t border-parchment">
+            <p className="font-sans text-[9px] text-muted-foreground">
+              <Star size={9} className="inline fill-gold text-gold" /> = default model (queries use only this one).
+              No star = queries run all selected models.
+            </p>
           </div>
         </div>
       )}
