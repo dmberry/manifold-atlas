@@ -294,7 +294,13 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
         }
       }
 
-      setPlottedConcepts(prev => [...prev, ...newPoints]);
+      // Deduplicate: if a concept+model pair already exists, replace it
+      setPlottedConcepts(prev => {
+        const existing = prev.filter(ep =>
+          !newPoints.some(np => np.concept === ep.concept && np.modelId === ep.modelId)
+        );
+        return [...existing, ...newPoints];
+      });
       setConceptInput("");
       onQueryTime((performance.now() - start) / 1000);
     } catch (e) {
