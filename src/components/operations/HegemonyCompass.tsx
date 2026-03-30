@@ -618,8 +618,10 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
             <div className="space-y-2 font-body text-body-sm text-slate leading-relaxed">
               <p>
                 Each concept is embedded into a high-dimensional vector (typically 768 to 3,072 dimensions).
-                The compass reduces this to two dimensions using a theoretically motivated method rather than
-                a statistical one like PCA or UMAP.
+                The compass reduces this to two dimensions, but unlike the Neighbourhood Map (which uses
+                statistical methods like PCA or UMAP to find axes automatically), here <em>you define
+                what the axes mean</em> by providing clusters of terms for each pole. The result is a
+                projection where both axes are conceptually interpretable, not just mathematically optimal.
               </p>
               <p>
                 <strong>How the axes work:</strong> Each axis is defined by two opposing clusters of terms
