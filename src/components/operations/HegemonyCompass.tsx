@@ -87,9 +87,18 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
 
   const preset = PRESETS[selectedPreset];
 
+  const DEFAULT_CONCEPTS = ["freedom", "justice", "efficiency", "solidarity", "profit"];
+  let defaultIndex = 0;
+
   const handleAddConcept = async () => {
-    const concept = conceptInput.trim();
-    if (!concept) return;
+    let concept = conceptInput.trim();
+    if (!concept) {
+      // Cycle through defaults
+      const plotted = new Set(plottedConcepts.map(p => p.concept));
+      const remaining = DEFAULT_CONCEPTS.filter(c => !plotted.has(c));
+      concept = remaining[0] || DEFAULT_CONCEPTS[defaultIndex++ % DEFAULT_CONCEPTS.length];
+      setConceptInput(concept);
+    }
 
     setLoading(true);
     setError(null);
@@ -222,7 +231,7 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
             />
             <button
               onClick={handleAddConcept}
-              disabled={loading || !conceptInput.trim()}
+              disabled={loading}
               className="btn-editorial-primary disabled:opacity-50"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <><Plus size={16} className="mr-1" />Plot</>}
@@ -235,21 +244,9 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                 {new Set(plottedConcepts.map(p => p.concept)).size} concept{new Set(plottedConcepts.map(p => p.concept)).size !== 1 ? "s" : ""} plotted.
                 Add more or reset to start over.
               </p>
-              <div className="flex items-center gap-2">
-                <label className="font-sans text-caption text-muted-foreground">Zoom:</label>
-                <select
-                  value={zoomOverride === null ? "auto" : String(zoomOverride)}
-                  onChange={e => setZoomOverride(e.target.value === "auto" ? null : Number(e.target.value))}
-                  className="input-editorial w-auto py-1 px-2 text-caption"
-                >
-                  <option value="auto">Auto</option>
-                  <option value="0.01">Very close</option>
-                  <option value="0.02">Close</option>
-                  <option value="0.05">Medium</option>
-                  <option value="0.1">Wide</option>
-                  <option value="0.15">Very wide</option>
-                </select>
-              </div>
+              <span className="font-sans text-caption text-muted-foreground">
+                Use +/− on the chart to zoom
+              </span>
             </div>
           )}
         </div>
@@ -264,7 +261,41 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
             <span className="font-sans text-body-sm font-semibold">{modelName}</span>
           </div>
           <div className="thin-rule mx-5" />
-          <div className="px-2 py-2" style={{ background: bgColor }}>
+          <div className="relative px-2 py-2" style={{ background: bgColor }}>
+            {/* Zoom buttons overlaid on chart */}
+            <div className="absolute top-4 right-4 z-10 flex flex-col gap-1">
+              <button
+                onClick={() => {
+                  const current = zoomOverride ?? (() => {
+                    const xs = points.map(p => p.x);
+                    const ys = points.map(p => p.y);
+                    return Math.max(0.005, ...xs.map(Math.abs), ...ys.map(Math.abs)) * 1.5;
+                  })();
+                  setZoomOverride(Math.max(0.003, current * 0.6));
+                }}
+                className="w-7 h-7 rounded-sm bg-card/80 border border-parchment-dark text-foreground hover:bg-card flex items-center justify-center font-sans text-body-sm font-bold shadow-editorial"
+                title="Zoom in"
+              >+</button>
+              <button
+                onClick={() => {
+                  const current = zoomOverride ?? (() => {
+                    const xs = points.map(p => p.x);
+                    const ys = points.map(p => p.y);
+                    return Math.max(0.005, ...xs.map(Math.abs), ...ys.map(Math.abs)) * 1.5;
+                  })();
+                  setZoomOverride(Math.min(0.3, current * 1.6));
+                }}
+                className="w-7 h-7 rounded-sm bg-card/80 border border-parchment-dark text-foreground hover:bg-card flex items-center justify-center font-sans text-body-sm font-bold shadow-editorial"
+                title="Zoom out"
+              >−</button>
+              {zoomOverride !== null && (
+                <button
+                  onClick={() => setZoomOverride(null)}
+                  className="w-7 h-7 rounded-sm bg-card/80 border border-parchment-dark text-muted-foreground hover:text-foreground hover:bg-card flex items-center justify-center font-sans text-[9px] font-semibold shadow-editorial"
+                  title="Reset to auto-zoom"
+                >A</button>
+              )}
+            </div>
             <PlotlyPlot
               data={[
                 {
@@ -309,7 +340,6 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                     gridcolor: gridColor,
                     showticklabels: false,
                     range: [-extent, extent],
-                    title: { text: `← ${preset.xAxis.negative.label}          ${preset.xAxis.positive.label} →`, font: { size: 12, color: textColor } },
                   },
                   yaxis: {
                     zeroline: true,
@@ -319,10 +349,20 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                     gridcolor: gridColor,
                     showticklabels: false,
                     range: [-extent, extent],
-                    scaleanchor: "x", // keep square aspect ratio
-                    title: { text: `← ${preset.yAxis.negative.label}          ${preset.yAxis.positive.label} →`, font: { size: 12, color: textColor } },
+                    scaleanchor: "x",
                   },
                   showlegend: false,
+                  // Axis labels at the very ends of each axis
+                  annotations: [
+                    // Right end of x-axis
+                    { xref: "paper", yref: "paper", x: 1, y: 0.5, text: `<b>${preset.xAxis.positive.label}</b> →`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "right", yanchor: "top", yshift: -8 },
+                    // Left end of x-axis
+                    { xref: "paper", yref: "paper", x: 0, y: 0.5, text: `← <b>${preset.xAxis.negative.label}</b>`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "left", yanchor: "top", yshift: -8 },
+                    // Top end of y-axis
+                    { xref: "paper", yref: "paper", x: 0.5, y: 1, text: `↑ <b>${preset.yAxis.positive.label}</b>`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "left", yanchor: "bottom", xshift: 8 },
+                    // Bottom end of y-axis
+                    { xref: "paper", yref: "paper", x: 0.5, y: 0, text: `↓ <b>${preset.yAxis.negative.label}</b>`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "left", yanchor: "top", xshift: 8 },
+                  ],
                   shapes: [
                     { type: "rect", x0: -extent, x1: 0, y0: 0, y1: extent, fillcolor: isDark ? "rgba(220,80,80,0.12)" : "rgba(220,80,80,0.15)", line: { width: 0 }, layer: "below" },
                     { type: "rect", x0: 0, x1: extent, y0: 0, y1: extent, fillcolor: isDark ? "rgba(80,120,220,0.12)" : "rgba(80,120,220,0.15)", line: { width: 0 }, layer: "below" },
