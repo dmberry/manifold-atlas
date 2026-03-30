@@ -23,6 +23,7 @@ export interface EmbeddingProviderConfig {
   requiresApiKey: boolean;
   baseUrlConfigurable: boolean;
   defaultBaseUrl?: string;
+  signupUrl?: string;
   models: EmbeddingModelSpec[];
 }
 
@@ -49,6 +50,7 @@ export const EMBEDDING_PROVIDERS: Record<EmbeddingProviderId, EmbeddingProviderC
     description: "OpenAI embedding models",
     requiresApiKey: true,
     baseUrlConfigurable: false,
+    signupUrl: "https://platform.openai.com/",
     models: EMBEDDING_MODELS.filter(m => m.providerId === "openai"),
   },
   voyage: {
@@ -57,6 +59,7 @@ export const EMBEDDING_PROVIDERS: Record<EmbeddingProviderId, EmbeddingProviderC
     description: "Voyage AI embedding models, recommended by Anthropic",
     requiresApiKey: true,
     baseUrlConfigurable: false,
+    signupUrl: "https://www.voyageai.com/",
     models: EMBEDDING_MODELS.filter(m => m.providerId === "voyage"),
   },
   google: {
@@ -65,6 +68,7 @@ export const EMBEDDING_PROVIDERS: Record<EmbeddingProviderId, EmbeddingProviderC
     description: "Google Gemini embedding models",
     requiresApiKey: true,
     baseUrlConfigurable: false,
+    signupUrl: "https://ai.google.dev/",
     models: EMBEDDING_MODELS.filter(m => m.providerId === "google"),
   },
   cohere: {
@@ -73,14 +77,16 @@ export const EMBEDDING_PROVIDERS: Record<EmbeddingProviderId, EmbeddingProviderC
     description: "Cohere embedding models",
     requiresApiKey: true,
     baseUrlConfigurable: false,
+    signupUrl: "https://cohere.com/",
     models: EMBEDDING_MODELS.filter(m => m.providerId === "cohere"),
   },
   huggingface: {
     id: "huggingface",
     name: "Hugging Face (Free)",
-    description: "Free embedding models via Hugging Face Inference API. Sign up at huggingface.co and get a free token from Settings > Access Tokens.",
+    description: "Free embedding models via Hugging Face Inference API. Get a free token from Settings > Access Tokens.",
     requiresApiKey: true,
     baseUrlConfigurable: false,
+    signupUrl: "https://huggingface.co/settings/tokens",
     models: EMBEDDING_MODELS.filter(m => m.providerId === "huggingface"),
   },
   ollama: {
@@ -98,6 +104,7 @@ export const EMBEDDING_PROVIDERS: Record<EmbeddingProviderId, EmbeddingProviderC
     description: "OpenRouter or any API compatible with OpenAI embedding format",
     requiresApiKey: true,
     baseUrlConfigurable: true,
+    signupUrl: "https://openrouter.ai/",
     models: [{ id: "custom", name: "Custom Model", providerId: "openai-compatible", dimensions: 0 }],
   },
 };

@@ -54,6 +54,19 @@ export function SettingsPanel() {
                       <h3 className="font-sans text-body-sm font-semibold">{provider.name}</h3>
                       <p className="font-sans text-caption text-slate mt-0.5">
                         {provider.description}
+                        {provider.signupUrl && (
+                          <>
+                            {" "}
+                            <a
+                              href={provider.signupUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burgundy underline underline-offset-2 hover:text-burgundy-900"
+                            >
+                              Get API key &rarr;
+                            </a>
+                          </>
+                        )}
                       </p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
