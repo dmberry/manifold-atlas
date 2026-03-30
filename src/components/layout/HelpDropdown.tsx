@@ -6,15 +6,18 @@ import { HelpCircle, X, ChevronRight, ChevronDown } from "lucide-react";
 interface HelpSection {
   title: string;
   content: string;
+  link?: { label: string; url: string };
 }
 
 const HELP_SECTIONS: HelpSection[] = [
   {
     title: "What is Vector Space?",
-    content: "Vector space is the mathematical container in which embedding models represent meaning (see Berry, 'What is Vector Space?', stunlaw.blogspot.com/2026/03/what-is-vector-space.html). Every word, phrase, or sentence is converted into a list of numbers (a vector) with hundreds or thousands of dimensions. These numbers are coordinates in a high-dimensional space. The properties of this space — its dimensionality, numerical precision, and structure — are not neutral. They are determined by hardware economics and training decisions. Vector space is not a passive container but a materially grained substrate whose properties shape what can and cannot be represented within it. A terminological note: other scholars use 'embedding space' (Impett and Offert 2026) or 'latent space' (Somaini 2025) for related but distinct concepts. 'Latent space' collapses the vector space and the manifold into a single term, obscuring the material properties of the container and the political questions they raise. 'Embedding space' foregrounds the technical operation of embedding but not the ownership structure. 'Vector space' names the mathematical form and opens the political questions: whose dimensions, at what precision, under what ownership?",
+    link: { label: "What is Vector Space?", url: "https://stunlaw.blogspot.com/2026/03/what-is-vector-space.html" },
+    content: "Vector space is the mathematical container in which embedding models represent meaning. Every word, phrase, or sentence is converted into a list of numbers (a vector) with hundreds or thousands of dimensions. These numbers are coordinates in a high-dimensional space. The properties of this space — its dimensionality, numerical precision, and structure — are not neutral. They are determined by hardware economics and training decisions. Vector space is not a passive container but a materially grained substrate whose properties shape what can and cannot be represented within it. A terminological note: other scholars use 'embedding space' (Impett and Offert 2026) or 'latent space' (Somaini 2025) for related but distinct concepts. 'Latent space' collapses the vector space and the manifold into a single term, obscuring the material properties of the container and the political questions they raise. 'Embedding space' foregrounds the technical operation of embedding but not the ownership structure. 'Vector space' names the mathematical form and opens the political questions: whose dimensions, at what precision, under what ownership?",
   },
   {
     title: "What is the Manifold?",
+    link: { label: "What is the Manifold?", url: "https://stunlaw.blogspot.com/2026/03/what-is-manifold.html" },
     content: "The manifold is the learned geometric structure that sits within vector space. During training, the model learns to arrange concepts in a curved, high-dimensional surface where position encodes meaning and proximity encodes association. The manifold is not the vector space itself but a geometric shape within it — like a crumpled sheet of paper in a room. It is a Formbestimmung (formal determination): an abstract, non-material principle that organises meaning from within. The manifold does not represent the world; it constitutes geometric relations that determine what counts as similar, related, or opposed. Note: 'manifold' is used here in the sense theorised by David M. Berry, rather than the strict mathematical use. The term names the geometric space produced by training as a material object shaped by the data, compute, and decisions that produced it. In the case of commercial models, this geometry is proprietary and accessed through a paid API. In the case of open-weight models, the geometry is inspectable but still determined by the conditions of its production.",
   },
   {
@@ -27,6 +30,7 @@ const HELP_SECTIONS: HelpSection[] = [
   },
   {
     title: "The Negation Deficit",
+    link: { label: "Negative Vectors", url: "https://stunlaw.blogspot.com/" },
     content: "Negation operates in a counterintuitive way in the manifold, and not at all how we might expect. The geometry does not encode 'A' and 'not A' as opposites, or as points far apart in the space. Instead, they are stored close together. The difference between a claim and its negation is typically a small rotation in a few dimensions — roughly 90 degrees in a small subspace — while the hundreds of other dimensions remain almost identical. This means 'this policy is fair' and 'this policy is not fair' often have cosine similarity above 0.9, because the vast majority of their coordinates are shared. The manifold does have some capacity for negation, but it is geometrically subtle: a minor perturbation where logic demands a categorical inversion. In everyday reasoning, negation flips the meaning entirely. In the manifold, it nudges the position slightly. This is the negation deficit: not that negation is absent, but that the geometry allocates it so little space that it becomes practically invisible relative to the conceptual work negation is supposed to do.",
   },
   {
@@ -35,10 +39,12 @@ const HELP_SECTIONS: HelpSection[] = [
   },
   {
     title: "Real Abstraction",
+    link: { label: "Real Abstraction Without Exchange", url: "https://stunlaw.blogspot.com/2026/03/real-abstraction-without-exchange.html" },
     content: "Sohn-Rethel argued that the exchange of commodities performs a real abstraction: it practically sets aside the qualitative differences between things, reducing them to commensurable quantities. The embedding layer performs the same operation at the level of meaning. Heterogeneous texts — a poem, a legal contract, a love letter — are converted into homogeneous geometric coordinates. The Sohn-Rethel Test measures how far this abstraction has progressed across different domains of human experience.",
   },
   {
     title: "The Proprietary Medium",
+    link: { label: "The Vector Medium", url: "https://stunlaw.blogspot.com/" },
     content: "Every vector observed through the embedding API was computed by a corporation that controls the geometry. The training data, the architecture, the loss function, the RLHF process — all are proprietary. You are paying the owner of the manifold for the privilege of observing it, and they control the resolution of the instrument. The political economy of the method is built into its conditions of possibility. This is why multi-model comparison matters: it reveals whether geometric politics are structural to the medium or contingent on particular training decisions.",
   },
 ];
@@ -88,6 +94,18 @@ export function HelpDropdown() {
                       <p className="font-body text-body-sm text-slate leading-relaxed">
                         {section.content}
                       </p>
+                      {section.link && (
+                        <p className="mt-2">
+                          <a
+                            href={section.link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-sans text-caption text-burgundy underline underline-offset-2 hover:text-burgundy-900"
+                          >
+                            {section.link.label} &rarr;
+                          </a>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
