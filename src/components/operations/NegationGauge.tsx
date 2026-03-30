@@ -43,23 +43,23 @@ function vectorNorm(v: number[]): number {
 function negationVerdict(sim: number, threshold: number): { severity: string; explanation: string } {
   if (sim >= 0.98) return {
     severity: "Total collapse",
-    explanation: "The manifold cannot distinguish this statement from its negation at all. The claim and its opposite occupy the same point. Logical opposition has been completely absorbed into geometric proximity.",
+    explanation: "The claim and its negation occupy virtually the same geometric position. Negation produces no meaningful displacement. The few dimensions in which they might differ are overwhelmed by similarity across all others.",
   };
   if (sim >= threshold) return {
-    severity: "Logical collapse",
-    explanation: "The manifold treats the statement and its negation as near-neighbours. The geometric distance is too small to sustain a meaningful distinction. This is the negation deficit in action: the manifold was produced through negation (the loss function) but operates without it.",
+    severity: "Geometrically trivial",
+    explanation: "Negation produces only a minor perturbation of the embedding, likely a small rotation in a few dimensions drowned out by similarity across all others. The geometric capacity for negation exists but is inadequate to the logical and dialectical weight that negation carries. The manifold was produced through negation (the loss function) but retains only a geometrically trivial trace of it.",
   };
   if (sim >= threshold - 0.07) return {
     severity: "Borderline",
-    explanation: "The manifold maintains a narrow distinction between the claim and its negation, but the margin is thin. Small perturbations in context could collapse it. This is the zone where the geometry's grasp on logical opposition is most fragile.",
+    explanation: "The manifold maintains a narrow distinction between the claim and its negation, but the margin is thin. The negation likely operates in a small dimensional subspace while the overwhelming majority of dimensions remain unchanged. Small perturbations in context could collapse even this narrow separation.",
   };
   if (sim >= 0.5) return {
     severity: "Partial separation",
-    explanation: "The manifold distinguishes the claim from its negation, but they remain in the same broad region. The negation shifts the position but does not create the categorical boundary that logical negation requires.",
+    explanation: "The manifold positions the claim and its negation in partially distinct regions. The negation shifts the embedding noticeably but does not create the categorical boundary that logical negation requires. The geometric distance is real but does not correspond to logical inversion.",
   };
   return {
     severity: "Adequate separation",
-    explanation: "The manifold positions the statement and its negation in distinct regions. This is the minimum geometric condition for the distinction to be operationally meaningful, though geometric distance is not the same as logical negation.",
+    explanation: "The manifold positions the statement and its negation in distinct regions. This is the minimum geometric condition for the distinction to be operationally meaningful, though geometric distance is never the same as logical negation. Distance measures proximity, not truth-value.",
   };
 }
 
@@ -156,9 +156,10 @@ export function NegationGauge({ onQueryTime }: NegationGaugeProps) {
           </div>
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
-          Test whether the manifold can distinguish a claim from its negation.
-          The manifold structurally lacks negation in both mathematical and logical-dialectical
-          senses. This gauge measures the empirical evidence for that deficit.
+          Measure the geometric adequacy of negation in the manifold. The manifold&apos;s
+          representation of negation is structurally inadequate to the logical weight negation
+          carries: a minor perturbation where logic requires categorical inversion.
+          This gauge measures the empirical evidence for that deficit.
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -318,19 +319,23 @@ export function NegationGauge({ onQueryTime }: NegationGaugeProps) {
           <div className="card-editorial p-4 border-l-4 border-l-burgundy">
             <h4 className="font-display text-body-sm font-bold mb-2">On the Negation Deficit</h4>
             <p className="font-body text-body-sm text-slate mb-2">
-              The manifold structurally lacks negation in both mathematical and logical-dialectical
-              senses. Three pseudo-negations exist in the geometry (negative vector components,
-              vector negation, cosine distance) but none provides what logical negation provides:
-              a boundary, a categorical exclusion, a &ldquo;not.&rdquo;
+              Natural-language negation in the manifold is likely an orthogonality rather than an
+              inversion: a rotation in a small number of dimensions rather than a reversal across
+              all dimensions. A claim and its negation share the overwhelming majority of their
+              geometric coordinates and differ in only a small subspace. The deficit is not that
+              the manifold has zero capacity for negation, but that its capacity is geometrically
+              trivial relative to the conceptual work negation performs.
             </p>
             <p className="font-body text-body-sm text-slate mb-2">
-              The manifold is produced through negation (the loss function minimises error, which is
-              a form of negation) but operates without it. This structural asymmetry parallels what
-              Marx called dead labour: negation creates the geometry but is not preserved within it.
+              In logic, negation inverts the truth value entirely. In dialectics, negation is the
+              motor of the argument. In the manifold, negation is a minor perturbation of an
+              otherwise stable coordinate. The manifold was produced through negation (the loss
+              function minimises error, a form of negation) but retains only a geometrically
+              trivial trace of it.
             </p>
             <p className="font-body text-body-sm text-slate">
-              A system that can position everything and negate nothing is not neutral. It is a system
-              whose political consequence is the geometric anaesthesia of opposition.
+              A system that can position everything but negate only trivially is not neutral. It is
+              a system whose political consequence is the geometric anaesthesia of opposition.
             </p>
           </div>
         </div>

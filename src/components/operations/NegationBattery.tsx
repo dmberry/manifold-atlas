@@ -174,8 +174,8 @@ export function NegationBattery({ onQueryTime }: NegationBatteryProps) {
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
           Run a battery of negation tests automatically. Select a pre-built set or enter your own
-          statements (one per line). Produces a report card showing which types of negation each
-          model fails to distinguish.
+          statements (one per line). Produces a report card showing where each model&apos;s
+          geometric representation of negation is inadequate to its logical weight.
         </p>
 
         <div className="space-y-3">

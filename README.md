@@ -3,7 +3,7 @@
 **Comparative geometry of AI embedding spaces.**
 
 **Author:** David M. Berry
-**Version:** 0.3
+**Version:** 0.3.1
 **Date:** 30 March 2026
 
 Manifold Atlas is a vector-native research tool for studying how large language models organise meaning geometrically. It uses embedding APIs from multiple AI providers to collect coordinates from the manifold, then computes distances, clusters, and projections that reveal the geometry's structure.
@@ -158,8 +158,8 @@ Manifold Atlas is a research instrument for the [vector theory](https://stunlaw.
 
 The tool operationalises this framework empirically. Key concepts and the features that test them:
 
-- **The embedding API as telescope** -- the one point where the medium exposes its internal vectors to the outside. The telescope sees the stars but does not visit them. All nine operations use this as their basic research instrument.
-- **The negation deficit** -- the manifold structurally lacks negation in both mathematical and logical-dialectical senses. The Negation Gauge and Negation Battery produce empirical evidence for this, measuring the cosine similarity between claims and their negations across models.
+- **The embedding API as telescope** -- the embedding API returns processed, averaged representations from a separately-trained model, not a direct window into the frontier model's internal geometry. This makes the telescope metaphor more precise, not less: a telescope does not show you the star itself but light refracted through lenses. You are studying a proprietary geometry through a proprietary aperture. All nine operations use this as their basic research instrument.
+- **The negation deficit** -- the manifold's geometric representation of negation is structurally inadequate to the logical and dialectical weight that negation carries. Negation in the geometry is likely a small rotation in a few dimensions, drowned out by overwhelming similarity across all other dimensions. The Negation Gauge and Battery measure this empirically: not that the manifold has zero capacity for negation, but that its capacity is geometrically trivial relative to the conceptual work negation performs.
 - **Geometric ideology** -- hegemony that operates through topology (density, sparsity, trajectory) rather than discourse (propositions, narratives, interpellation). The Neighbourhood Map's cluster analysis, connection mesh, and density mapping test this.
 - **Manifold sectioning** -- cutting the geometry along critically chosen planes to reveal where one domain shades into another. Semantic Sectioning operationalises this directly.
 - **Geometric stress testing** -- embedding the same concept in different contexts to measure how the manifold warps under contextual pressure. Concept Drift operationalises this.
@@ -181,6 +181,8 @@ Type `clippy` anywhere (outside a text input) for the Manifold Atlas Clippy. Typ
 ## Acknowledgements
 
 Concept and Design by David M. Berry, implemented with Claude Code 4.6. Design system adapted from the [CCS Workbench](https://github.com/dmberry/ccs-wb).
+
+Many thanks to Michael Castelle, Michael Dieter, and others for feedback and comments on the Manifold Atlas.
 
 ## Licence
 

@@ -197,7 +197,10 @@ export function ConceptDistance({ onQueryTime }: ConceptDistanceProps) {
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
           Measure the geometric relationship between two concepts across embedding models.
-          How does the manifold position them relative to each other?
+          How does the manifold position them relative to each other? You can enter single
+          words or full phrases. Since embedding models are trained on sentence-level pairs,
+          phrases like &ldquo;the concept of justice&rdquo; may produce more precise results
+          than bare terms like &ldquo;justice&rdquo;.
         </p>
         <div className="flex items-center gap-3">
           <input

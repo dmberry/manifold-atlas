@@ -39,7 +39,7 @@ export function AboutModal() {
             <div className="px-6 py-4 space-y-3">
               <div className="grid grid-cols-[120px_1fr] gap-y-2 font-sans text-body-sm">
                 <span className="text-muted-foreground">Version</span>
-                <span className="font-medium">0.3.0</span>
+                <span className="font-medium">0.3.1</span>
 
                 <span className="text-muted-foreground">Date</span>
                 <span className="font-medium">30 March 2026</span>
@@ -120,6 +120,19 @@ export function AboutModal() {
               >
                 Stunlaw
               </a>
+            </div>
+
+            <div className="thin-rule mx-6" />
+
+            {/* Acknowledgements */}
+            <div className="px-6 py-4">
+              <h3 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+                Acknowledgements
+              </h3>
+              <p className="font-body text-body-sm text-slate">
+                Many thanks to Michael Castelle, Michael Dieter, and others for feedback
+                and comments on the Manifold Atlas.
+              </p>
             </div>
 
             {/* Easter egg hint */}
