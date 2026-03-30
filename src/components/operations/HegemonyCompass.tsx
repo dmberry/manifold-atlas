@@ -311,6 +311,49 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
 
       {error != null && <ErrorDisplay error={error} onRetry={handleAddConcept} />}
 
+      {/* Empty compass preview when no data yet */}
+      {plottedConcepts.length === 0 && (
+        <div className="card-editorial overflow-hidden">
+          <div className="px-5 pt-5 pb-3">
+            <span className="font-sans text-body-sm font-semibold text-muted-foreground">
+              {preset.name} — enter concepts above to plot them
+            </span>
+          </div>
+          <div className="thin-rule mx-5" />
+          <div className="px-2 py-2" style={{ background: bgColor }}>
+            <PlotlyPlot
+              data={[{ x: [], y: [], type: "scatter", mode: "markers" }]}
+              layout={(() => {
+                const extent = 0.05;
+                return {
+                  height: 520,
+                  margin: { t: 40, r: 60, b: 60, l: 60 },
+                  paper_bgcolor: bgColor,
+                  plot_bgcolor: bgColor,
+                  xaxis: { zeroline: true, zerolinecolor: isDark ? "rgba(200,200,220,0.6)" : "rgba(30,30,30,0.7)", zerolinewidth: 2, showgrid: true, gridcolor: gridColor, showticklabels: false, range: [-extent, extent] },
+                  yaxis: { zeroline: true, zerolinecolor: isDark ? "rgba(200,200,220,0.6)" : "rgba(30,30,30,0.7)", zerolinewidth: 2, showgrid: true, gridcolor: gridColor, showticklabels: false, range: [-extent, extent], scaleanchor: "x" },
+                  showlegend: false,
+                  annotations: [
+                    { xref: "paper", yref: "paper", x: 1, y: 0.5, text: `<b>${preset.xAxis.positive.label}</b> →`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "right", yanchor: "top", yshift: -8 },
+                    { xref: "paper", yref: "paper", x: 0, y: 0.5, text: `← <b>${preset.xAxis.negative.label}</b>`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "left", yanchor: "top", yshift: -8 },
+                    { xref: "paper", yref: "paper", x: 0.5, y: 1, text: `↑ <b>${preset.yAxis.positive.label}</b>`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "left", yanchor: "bottom", xshift: 8 },
+                    { xref: "paper", yref: "paper", x: 0.5, y: 0, text: `↓ <b>${preset.yAxis.negative.label}</b>`, showarrow: false, font: { size: 11, color: textColor }, xanchor: "left", yanchor: "top", xshift: 8 },
+                  ],
+                  shapes: [
+                    { type: "rect", x0: -extent, x1: 0, y0: 0, y1: extent, fillcolor: isDark ? "rgba(220,80,80,0.12)" : "rgba(220,80,80,0.15)", line: { width: 0 }, layer: "below" },
+                    { type: "rect", x0: 0, x1: extent, y0: 0, y1: extent, fillcolor: isDark ? "rgba(80,120,220,0.12)" : "rgba(80,120,220,0.15)", line: { width: 0 }, layer: "below" },
+                    { type: "rect", x0: -extent, x1: 0, y0: -extent, y1: 0, fillcolor: isDark ? "rgba(80,200,80,0.12)" : "rgba(80,200,80,0.15)", line: { width: 0 }, layer: "below" },
+                    { type: "rect", x0: 0, x1: extent, y0: -extent, y1: 0, fillcolor: isDark ? "rgba(160,80,200,0.12)" : "rgba(160,80,200,0.15)", line: { width: 0 }, layer: "below" },
+                  ],
+                };
+              })()}
+              config={{ displayModeBar: false, responsive: true }}
+              style={{ width: "100%", height: "520px" }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Compass plots per model */}
       {[...modelGroups.entries()].map(([modelId, { modelName, points }]) => (
         <div key={modelId} className="card-editorial overflow-hidden">
