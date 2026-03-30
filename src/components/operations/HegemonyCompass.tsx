@@ -87,7 +87,7 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
 
   const preset = PRESETS[selectedPreset];
 
-  const DEFAULT_CONCEPTS = ["freedom", "justice", "efficiency", "solidarity", "profit"];
+  const DEFAULT_CONCEPTS = ["democracy", "freedom", "sovereignty", "revolution", "capitalism"];
   let defaultIndex = 0;
 
   const handleAddConcept = async () => {
