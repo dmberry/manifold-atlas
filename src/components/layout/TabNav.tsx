@@ -1,55 +1,118 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Ruler, Map, Gauge, Crosshair, GitBranch, Waypoints, Compass, Scale, Volume2 } from "lucide-react";
+import { Ruler, Map, Scale } from "lucide-react";
 
-export type TabId = "distance" | "neighbourhood" | "negation" | "battery" | "sectioning" | "drift" | "compass" | "sohnrethel" | "silence";
+export type TabId = "distance" | "negation" | "battery" | "neighbourhood" | "sectioning" | "drift" | "compass" | "abstraction" | "silence";
+export type GroupId = "measure" | "map" | "critique";
+
+interface TabGroup {
+  id: GroupId;
+  label: string;
+  description: string;
+  icon: typeof Ruler;
+  tabs: Array<{ id: TabId; label: string }>;
+}
+
+const GROUPS: TabGroup[] = [
+  {
+    id: "measure",
+    label: "Measure",
+    description: "Point-to-point geometric measurement",
+    icon: Ruler,
+    tabs: [
+      { id: "distance", label: "Concept Distance" },
+      { id: "negation", label: "Negation Gauge" },
+      { id: "battery", label: "Negation Battery" },
+    ],
+  },
+  {
+    id: "map",
+    label: "Map",
+    description: "Spatial structure and topology",
+    icon: Map,
+    tabs: [
+      { id: "neighbourhood", label: "Neighbourhood" },
+      { id: "sectioning", label: "Semantic Sectioning" },
+      { id: "drift", label: "Concept Drift" },
+    ],
+  },
+  {
+    id: "critique",
+    label: "Critique",
+    description: "Ideological and political analysis",
+    icon: Scale,
+    tabs: [
+      { id: "compass", label: "Hegemony Compass" },
+      { id: "abstraction", label: "Real Abstraction" },
+      { id: "silence", label: "Silence Detector" },
+    ],
+  },
+];
+
+function getGroup(tabId: TabId): GroupId {
+  for (const group of GROUPS) {
+    if (group.tabs.some(t => t.id === tabId)) return group.id;
+  }
+  return "measure";
+}
 
 interface TabNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
 }
 
-const TABS: Array<{ id: TabId; label: string; icon: typeof Ruler }> = [
-  { id: "distance", label: "Concept Distance", icon: Ruler },
-  { id: "neighbourhood", label: "Neighbourhood Map", icon: Map },
-  { id: "negation", label: "Negation Gauge", icon: Gauge },
-  { id: "battery", label: "Negation Battery", icon: Crosshair },
-  { id: "sectioning", label: "Semantic Sectioning", icon: GitBranch },
-  { id: "drift", label: "Concept Drift", icon: Waypoints },
-  { id: "compass", label: "Hegemony Compass", icon: Compass },
-  { id: "sohnrethel", label: "Sohn-Rethel Test", icon: Scale },
-  { id: "silence", label: "Silence Detector", icon: Volume2 },
-];
-
 export function TabNav({ activeTab, onTabChange }: TabNavProps) {
+  const activeGroup = getGroup(activeTab);
+  const currentGroup = GROUPS.find(g => g.id === activeGroup)!;
+
   return (
-    <nav className="border-b border-parchment-dark px-6 bg-card overflow-x-auto">
-      <div className="flex gap-0">
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+    <div className="bg-card">
+      {/* Group tabs */}
+      <div className="px-6 flex gap-0 border-b border-parchment-dark">
+        {GROUPS.map(group => {
+          const Icon = group.icon;
+          const isActive = group.id === activeGroup;
+          return (
+            <button
+              key={group.id}
+              onClick={() => onTabChange(group.tabs[0].id)}
+              className={cn(
+                "flex items-center gap-2 px-6 py-3 font-sans text-body-sm font-semibold",
+                "border-b-[3px] transition-all duration-200",
+                isActive
+                  ? "border-burgundy text-burgundy bg-background"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-cream/30"
+              )}
+            >
+              <Icon size={16} />
+              {group.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Sub-tabs for active group */}
+      <div className="px-6 flex gap-1 py-1 border-b border-parchment bg-muted/30">
+        {currentGroup.tabs.map(tab => {
+          const isActive = tab.id === activeTab;
           return (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-3 font-sans text-caption font-medium whitespace-nowrap",
-                "border-b-3 transition-all duration-200 relative",
+                "px-4 py-1.5 font-sans text-body-sm font-medium rounded-sm",
+                "transition-all duration-200",
                 isActive
-                  ? "border-burgundy text-burgundy bg-background"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-cream/50"
+                  ? "text-primary-foreground bg-burgundy shadow-editorial"
+                  : "text-muted-foreground hover:text-foreground hover:bg-cream/50"
               )}
             >
-              <Icon size={14} />
               {tab.label}
-              {isActive && (
-                <span className="absolute bottom-0 left-1 right-1 h-[3px] bg-burgundy rounded-t-full" />
-              )}
             </button>
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 }

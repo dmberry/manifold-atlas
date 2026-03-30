@@ -48,7 +48,7 @@ function AppContent() {
         <div className={activeTab === "compass" ? "" : "hidden"}>
           <HegemonyCompass onQueryTime={setLastQueryTime} />
         </div>
-        <div className={activeTab === "sohnrethel" ? "" : "hidden"}>
+        <div className={activeTab === "abstraction" ? "" : "hidden"}>
           <SohnRethelTest onQueryTime={setLastQueryTime} />
         </div>
         <div className={activeTab === "silence" ? "" : "hidden"}>

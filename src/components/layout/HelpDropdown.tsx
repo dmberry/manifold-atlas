@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import { HelpCircle, X, ChevronRight, ChevronDown } from "lucide-react";
+
+interface HelpSection {
+  title: string;
+  content: string;
+}
+
+const HELP_SECTIONS: HelpSection[] = [
+  {
+    title: "What is Vector Space?",
+    content: "Vector space is the mathematical container in which embedding models represent meaning. Every word, phrase, or sentence is converted into a list of numbers (a vector) with hundreds or thousands of dimensions. These numbers are coordinates in a high-dimensional space. The properties of this space — its dimensionality, numerical precision, and structure — are not neutral. They are determined by hardware economics and training decisions. Vector space is not a passive container but a materially grained substrate whose properties shape what can and cannot be represented within it.",
+  },
+  {
+    title: "What is the Manifold?",
+    content: "The manifold is the learned geometric structure that sits within vector space. During training, the model learns to arrange concepts in a curved, high-dimensional surface where position encodes meaning and proximity encodes association. The manifold is not the vector space itself but a geometric shape within it — like a crumpled sheet of paper in a room. It is a Formbestimmung (formal determination): an abstract, non-material principle that organises meaning from within. The manifold does not represent the world; it constitutes geometric relations that determine what counts as similar, related, or opposed.",
+  },
+  {
+    title: "What is the Embedding API?",
+    content: "The embedding API is the interface through which you can observe the manifold. You send text in; you get coordinates back. It is the telescope: it lets you see where concepts are positioned in the geometry, but you cannot visit the space itself or modify it. Every observation costs money (the telescope has a subscription fee) and every coordinate was computed by a corporation that controls the geometry. The embedding API is the crack in the impenetrability of the medium — the one point where the model exposes its internal vectors to the outside.",
+  },
+  {
+    title: "What is Cosine Similarity?",
+    content: "Cosine similarity measures the angle between two vectors, ignoring their magnitude. It ranges from -1 (opposite directions) through 0 (orthogonal, no relationship) to 1 (identical direction). In practice, most embedding similarities fall between 0.3 and 1.0. A similarity of 0.9 between two concepts means the manifold treats them as very close neighbours. This is the primary instrument of Manifold Atlas: every operation ultimately measures cosine similarity and interprets what it means.",
+  },
+  {
+    title: "The Negation Deficit",
+    content: "The manifold structurally lacks negation. There is no geometric operation that corresponds to logical 'not'. Three pseudo-negations exist — negative vector components, vector negation (flipping the sign), and cosine distance — but none provides what logical negation provides: a boundary, a categorical exclusion. The manifold was produced through negation (the loss function minimises error, a form of negation) but operates without it. This is why 'this policy is fair' and 'this policy is not fair' often have cosine similarity above 0.9: the geometry cannot distinguish a claim from its negation.",
+  },
+  {
+    title: "Geometric Ideology",
+    content: "Classical ideology critique assumes ideology makes claims — representations, propositions, narratives that misrepresent social relations. The manifold makes no claims. It orients, clusters, and makes some trajectories probable. Geometric ideology is hegemony that operates through topology (density, sparsity, trajectory) rather than discourse (propositions, narratives, interpellation). The dense regions of the manifold are where the dominant meanings live. The sparse regions are where the silences are. The Neighbourhood Map, Hegemony Compass, and Silence Detector make this visible.",
+  },
+  {
+    title: "Real Abstraction",
+    content: "Sohn-Rethel argued that the exchange of commodities performs a real abstraction: it practically sets aside the qualitative differences between things, reducing them to commensurable quantities. The embedding layer performs the same operation at the level of meaning. Heterogeneous texts — a poem, a legal contract, a love letter — are converted into homogeneous geometric coordinates. The Sohn-Rethel Test measures how far this abstraction has progressed across different domains of human experience.",
+  },
+  {
+    title: "The Proprietary Medium",
+    content: "Every vector observed through the embedding API was computed by a corporation that controls the geometry. The training data, the architecture, the loss function, the RLHF process — all are proprietary. You are paying the owner of the manifold for the privilege of observing it, and they control the resolution of the instrument. The political economy of the method is built into its conditions of possibility. This is why multi-model comparison matters: it reveals whether geometric politics are structural to the medium or contingent on particular training decisions.",
+  },
+];
+
+export function HelpDropdown() {
+  const [open, setOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<number | null>(null);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="btn-editorial-ghost px-3 py-2"
+        title="Help: Vector Theory concepts"
+      >
+        <HelpCircle size={16} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-50 w-[480px] max-w-[90vw] max-h-[70vh] overflow-y-auto card-editorial shadow-editorial-lg">
+            <div className="p-4 border-b border-parchment flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-display-md font-bold">Vector Theory Guide</h2>
+                <p className="font-sans text-caption text-muted-foreground mt-0.5">
+                  Key concepts for understanding Manifold Atlas
+                </p>
+              </div>
+              <button onClick={() => setOpen(false)} className="btn-editorial-ghost px-2 py-1">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="divide-y divide-parchment">
+              {HELP_SECTIONS.map((section, i) => (
+                <div key={i}>
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === i ? null : i)}
+                    className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-cream/50 transition-colors"
+                  >
+                    {expandedSection === i ? <ChevronDown size={14} className="text-burgundy" /> : <ChevronRight size={14} className="text-muted-foreground" />}
+                    <span className="font-sans text-body-sm font-semibold">{section.title}</span>
+                  </button>
+                  {expandedSection === i && (
+                    <div className="px-4 pb-4 pl-10">
+                      <p className="font-body text-body-sm text-slate leading-relaxed">
+                        {section.content}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-parchment">
+              <p className="font-sans text-caption text-muted-foreground">
+                Based on <a href="https://stunlaw.blogspot.com/2026/02/vector-theory.html" target="_blank" rel="noopener noreferrer" className="text-burgundy underline">Vector Theory</a> by David M. Berry.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

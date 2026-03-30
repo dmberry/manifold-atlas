@@ -2,6 +2,7 @@
 
 import { Settings, Moon, Sun } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
+import { HelpDropdown } from "./HelpDropdown";
 
 export function Header() {
   const { settings, toggleDarkMode, setSettingsOpen } = useSettings();
@@ -17,6 +18,7 @@ export function Header() {
         </p>
       </div>
       <div className="flex items-center gap-2">
+        <HelpDropdown />
         <button
           onClick={toggleDarkMode}
           className="btn-editorial-ghost px-3 py-2"

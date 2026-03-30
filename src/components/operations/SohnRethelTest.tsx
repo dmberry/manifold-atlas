@@ -120,7 +120,7 @@ export function SohnRethelTest({ onQueryTime }: SohnRethelTestProps) {
     <div className="space-y-6">
       <div className="card-editorial p-6">
         <div className="flex items-start justify-between mb-1">
-          <h2 className="font-display text-display-md font-bold">Sohn-Rethel Test</h2>
+          <h2 className="font-display text-display-md font-bold">Real Abstraction Test</h2>
           <ResetButton onReset={() => { setResults([]); setError(null); setCustomPairs(""); }} />
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
