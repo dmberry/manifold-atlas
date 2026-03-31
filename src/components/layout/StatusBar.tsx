@@ -2,6 +2,7 @@
 
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbeddingCache } from "@/context/EmbeddingCacheContext";
+import { VERSION } from "@/lib/version";
 
 interface StatusBarProps {
   lastQueryTime?: number;
@@ -15,7 +16,7 @@ export function StatusBar({ lastQueryTime }: StatusBarProps) {
   return (
     <footer className="border-t border-parchment-dark px-6 py-2 flex items-center gap-6 font-sans text-caption text-slate">
       <span>
-        <span className="text-ink font-medium">v0.3.1</span>
+        <span className="text-ink font-medium">v{VERSION}</span>
       </span>
       <span className="h-3 w-px bg-parchment-dark" />
       <span>

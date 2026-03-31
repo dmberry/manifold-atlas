@@ -1,3 +1,9 @@
+/**
+ * Manifold Atlas
+ * Concept and Design: David M. Berry, University of Sussex
+ * Implemented with Claude Code 4.6
+ */
+
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Libre_Baskerville, Source_Serif_4, Inter } from "next/font/google";

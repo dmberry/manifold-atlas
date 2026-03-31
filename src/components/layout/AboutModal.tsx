@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Info, X, ChevronRight } from "lucide-react";
 import { ReadingListModal } from "./ReadingListModal";
+import { VERSION, VERSION_DATE } from "@/lib/version";
 
 export function AboutModal() {
   const [open, setOpen] = useState(false);
@@ -41,10 +42,10 @@ export function AboutModal() {
             <div className="px-6 py-4 space-y-3">
               <div className="grid grid-cols-[120px_1fr] gap-y-2 font-sans text-body-sm">
                 <span className="text-muted-foreground">Version</span>
-                <span className="font-medium">0.3.1</span>
+                <span className="font-medium">{VERSION}</span>
 
                 <span className="text-muted-foreground">Date</span>
-                <span className="font-medium">30 March 2026</span>
+                <span className="font-medium">{VERSION_DATE}</span>
 
                 <span className="text-muted-foreground">Author</span>
                 <span className="font-medium">David M. Berry</span>

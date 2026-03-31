@@ -1,3 +1,15 @@
+/**
+ * Manifold Atlas
+ * Comparative Geometry of AI Embedding Spaces
+ *
+ * Concept and Design: David M. Berry
+ * University of Sussex
+ * https://stunlaw.blogspot.com
+ *
+ * Implemented with Claude Code 4.6
+ * MIT Licence
+ */
+
 "use client";
 
 import { useState } from "react";

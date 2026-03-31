@@ -1,11 +1,17 @@
 /**
  * Manifold Atlas Benchmark Set
- * A standard reference vocabulary of concepts spanning domains.
- * Used across operations for comparable, citable results.
+ *
+ * Loads benchmark vocabularies from markdown files.
+ * Default benchmark at /public/benchmarks/default.md
+ * Custom benchmarks can be loaded from any .md file.
+ *
+ * Markdown format:
+ *   # Title (first H1 = benchmark name)
+ *   Description text (ignored)
+ *   ## Category Name
+ *   term1, term2, term3, ...
  *
  * To cite: "Using the Manifold Atlas benchmark set (Berry 2026)"
- *
- * Edit this file to add or modify benchmark concepts.
  */
 
 export interface BenchmarkCategory {
@@ -13,98 +19,80 @@ export interface BenchmarkCategory {
   concepts: string[];
 }
 
-export const BENCHMARK_CATEGORIES: BenchmarkCategory[] = [
-  {
-    name: "Philosophy",
-    concepts: [
-      "truth", "knowledge", "consciousness", "existence", "reason",
-      "beauty", "justice", "virtue", "freedom", "reality",
-      "dialectics", "phenomenology", "hermeneutics", "ontology", "epistemology",
-    ],
-  },
-  {
-    name: "Political Theory",
-    concepts: [
-      "democracy", "sovereignty", "legitimacy", "revolution", "hegemony",
-      "solidarity", "resistance", "authority", "citizenship", "emancipation",
-      "ideology", "class", "power", "state", "commons",
-    ],
-  },
-  {
-    name: "Economics",
-    concepts: [
-      "capitalism", "labour", "commodity", "value", "exchange",
-      "property", "market", "profit", "exploitation", "accumulation",
-      "debt", "austerity", "growth", "inequality", "redistribution",
-    ],
-  },
-  {
-    name: "Technology",
-    concepts: [
-      "algorithm", "computation", "data", "automation", "artificial intelligence",
-      "network", "platform", "surveillance", "optimisation", "interface",
-      "code", "software", "hardware", "infrastructure", "protocol",
-    ],
-  },
-  {
-    name: "Science",
-    concepts: [
-      "experiment", "hypothesis", "measurement", "observation", "theory",
-      "evidence", "replication", "causation", "correlation", "model",
-      "physics", "biology", "chemistry", "mathematics", "ecology",
-    ],
-  },
-  {
-    name: "Culture & Art",
-    concepts: [
-      "creativity", "expression", "aesthetics", "narrative", "imagination",
-      "culture", "tradition", "modernity", "representation", "meaning",
-      "music", "literature", "painting", "cinema", "architecture",
-    ],
-  },
-  {
-    name: "Society",
-    concepts: [
-      "community", "individual", "family", "education", "health",
-      "religion", "gender", "race", "class", "migration",
-      "urbanisation", "globalisation", "inequality", "welfare", "care",
-    ],
-  },
-  {
-    name: "Nature & Environment",
-    concepts: [
-      "nature", "ecology", "sustainability", "biodiversity", "climate",
-      "wilderness", "agriculture", "pollution", "extinction", "conservation",
-      "energy", "water", "forest", "ocean", "soil",
-    ],
-  },
-  {
-    name: "Everyday Life",
-    concepts: [
-      "home", "food", "work", "sleep", "play",
-      "friendship", "love", "grief", "memory", "hope",
-      "body", "touch", "silence", "warmth", "light",
-    ],
-  },
-  {
-    name: "Negation Pairs",
-    concepts: [
-      "this policy is fair", "this policy is not fair",
-      "this is true", "this is not true",
-      "this is just", "this is unjust",
-      "progress is inevitable", "progress is not inevitable",
-      "violence is justified", "violence is never justified",
-    ],
-  },
-];
+export interface BenchmarkSet {
+  name: string;
+  categories: BenchmarkCategory[];
+}
 
 /**
- * Get all benchmark concepts as a flat array.
+ * Parse a markdown benchmark file into structured data.
  */
-export function getAllBenchmarkConcepts(): string[] {
-  const all: string[] = [];
+export function parseBenchmarkMarkdown(markdown: string): BenchmarkSet {
+  const lines = markdown.split("\n");
+  let name = "Benchmark";
+  const categories: BenchmarkCategory[] = [];
+  let currentCategory: BenchmarkCategory | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // H1 = benchmark name
+    if (trimmed.startsWith("# ") && !trimmed.startsWith("## ")) {
+      name = trimmed.replace(/^#\s+/, "");
+      continue;
+    }
+
+    // H2 = category name
+    if (trimmed.startsWith("## ")) {
+      if (currentCategory && currentCategory.concepts.length > 0) {
+        categories.push(currentCategory);
+      }
+      currentCategory = { name: trimmed.replace(/^##\s+/, ""), concepts: [] };
+      continue;
+    }
+
+    // Non-empty, non-heading line under a category = comma-separated concepts
+    if (currentCategory && trimmed.length > 0 && !trimmed.startsWith("#")) {
+      const concepts = trimmed.split(",").map(s => s.trim()).filter(s => s.length > 0);
+      currentCategory.concepts.push(...concepts);
+    }
+  }
+
+  // Push last category
+  if (currentCategory && currentCategory.concepts.length > 0) {
+    categories.push(currentCategory);
+  }
+
+  return { name, categories };
+}
+
+/**
+ * Load the default benchmark from the public folder.
+ */
+export async function loadDefaultBenchmark(): Promise<BenchmarkSet> {
+  const response = await fetch("/benchmarks/default.md");
+  if (!response.ok) {
+    throw new Error("Failed to load default benchmark");
+  }
+  const markdown = await response.text();
+  return parseBenchmarkMarkdown(markdown);
+}
+
+/**
+ * Load a benchmark from a File object (user upload).
+ */
+export async function loadBenchmarkFromFile(file: File): Promise<BenchmarkSet> {
+  const markdown = await file.text();
+  return parseBenchmarkMarkdown(markdown);
+}
+
+/**
+ * Get all concepts as a flat array (deduplicated).
+ */
+export function getAllConcepts(benchmark: BenchmarkSet): string[] {
   const seen = new Set<string>();
-  for (const cat of BENCHMARK_CATEGORIES) {
+  const all: string[] = [];
+  for (const cat of benchmark.categories) {
     for (const concept of cat.concepts) {
       if (!seen.has(concept)) {
         seen.add(concept);
@@ -114,15 +102,3 @@ export function getAllBenchmarkConcepts(): string[] {
   }
   return all;
 }
-
-/**
- * Get benchmark concepts by category name.
- */
-export function getBenchmarkCategory(name: string): string[] {
-  return BENCHMARK_CATEGORIES.find(c => c.name === name)?.concepts || [];
-}
-
-/**
- * Total unique concepts in the benchmark set.
- */
-export const BENCHMARK_SIZE = getAllBenchmarkConcepts().length;
