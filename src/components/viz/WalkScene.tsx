@@ -261,7 +261,18 @@ function Scene({ steps, anchorA, anchorB, anchorCoords, referencePoints, walking
       {/* Particle */}
       <Particle position={currentScaled} color="#ef4444" />
 
-      {/* Nearest concept label at particle */}
+      {/* Blend ratio label above particle */}
+      <Text
+        position={[currentScaled[0], currentScaled[1] + 0.25, currentScaled[2]]}
+        fontSize={0.06}
+        color={isDark ? "#aaaacc" : "#666655"}
+        anchorX="center"
+        anchorY="bottom"
+      >
+        {`${Math.round((1 - currentStep.position) * 100)}% ${anchorA}  ${Math.round(currentStep.position * 100)}% ${anchorB}`}
+      </Text>
+
+      {/* Nearest concept label below particle */}
       <Text
         position={[currentScaled[0], currentScaled[1] - 0.2, currentScaled[2]]}
         fontSize={0.09}

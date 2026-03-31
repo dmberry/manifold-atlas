@@ -307,15 +307,26 @@ function WalkPlayer({ result, isDark }: { result: WalkResult; isDark: boolean })
 
       {/* Progress bar and current concept */}
       <div className="px-5 py-3 bg-muted/30">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <span className="font-sans text-caption text-muted-foreground">
-            Step {progress + 1} of {INTERPOLATION_STEPS + 1}
+            Step {progress + 1} / {INTERPOLATION_STEPS + 1}
           </span>
           <span className="font-sans text-body-sm font-bold" style={{ color: "#ef4444" }}>
-            {currentStep?.nearestConcept}
+            Nearest: {currentStep?.nearestConcept}
           </span>
           <span className="font-sans text-caption tabular-nums text-muted-foreground">
             sim: {currentStep?.nearestSimilarity?.toFixed(4)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-sans text-caption text-muted-foreground tabular-nums">
+            {Math.round((1 - (currentStep?.position || 0)) * 100)}% {result.anchorA}
+          </span>
+          <span className="font-sans text-caption text-muted-foreground">
+            Synthetic vector
+          </span>
+          <span className="font-sans text-caption text-muted-foreground tabular-nums">
+            {Math.round((currentStep?.position || 0) * 100)}% {result.anchorB}
           </span>
         </div>
         <input
