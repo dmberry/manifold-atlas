@@ -323,7 +323,7 @@ function WalkPlayer({ result, isDark }: { result: WalkResult; isDark: boolean })
             {Math.round((1 - (currentStep?.position || 0)) * 100)}% {result.anchorA}
           </span>
           <span className="font-sans text-caption text-muted-foreground">
-            Synthetic vector
+            Synthetic vector ({Math.round((1 - (currentStep?.position || 0)) * 100)}% {result.anchorA}, {Math.round((currentStep?.position || 0) * 100)}% {result.anchorB})
           </span>
           <span className="font-sans text-caption text-muted-foreground tabular-nums">
             {Math.round((currentStep?.position || 0) * 100)}% {result.anchorB}
