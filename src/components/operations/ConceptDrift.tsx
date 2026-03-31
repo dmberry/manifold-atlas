@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { Loader2, Waypoints } from "lucide-react";
+import { Loader2, Waypoints, Download } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -124,7 +124,7 @@ export function ConceptDrift({ onQueryTime }: ConceptDriftProps) {
     <div className="space-y-6">
       <div className="card-editorial p-6">
         <div className="flex items-start justify-between mb-1">
-          <h2 className="font-display text-display-md font-bold">Concept Drift</h2>
+          <h2 className="font-display text-display-md font-bold">Vector Drift</h2>
           <ResetButton onReset={() => { setConcept(""); setContextsText(""); setResult(null); setError(null); }} />
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
@@ -454,6 +454,28 @@ function DriftModelPanel({ model, concept, variants, isDark }: {
                 : "Low contextual sensitivity: this concept is geometrically rigid across framings."
               }
             </div>
+          </div>
+
+          <div className="thin-rule mx-5" />
+
+          {/* Export */}
+          <div className="px-5 py-3 flex justify-end">
+            <button
+              onClick={() => {
+                const rows = ["variant,similarity_to_base,displacement"];
+                model.drifts.forEach(d => rows.push(`"${d.variant}",${d.similarity.toFixed(6)},${d.displacement.toFixed(6)}`));
+                const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `vector-drift-${concept}-${model.modelId}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="btn-editorial-ghost text-caption px-3 py-1.5"
+            >
+              <Download size={14} className="mr-1" />Export CSV
+            </button>
           </div>
         </div>
       </div>

@@ -25,7 +25,7 @@ const GROUPS: TabGroup[] = [
       { id: "matrix", label: "Distance Matrix" },
       { id: "negation", label: "Negation Gauge" },
       { id: "battery", label: "Negation Battery" },
-      { id: "analogy", label: "Analogy Arithmetic" },
+      { id: "analogy", label: "Vector Arithmetic" },
     ],
   },
   {
@@ -36,7 +36,7 @@ const GROUPS: TabGroup[] = [
     tabs: [
       { id: "neighbourhood", label: "Neighbourhood" },
       { id: "sectioning", label: "Semantic Sectioning" },
-      { id: "drift", label: "Concept Drift" },
+      { id: "drift", label: "Vector Drift" },
     ],
   },
   {

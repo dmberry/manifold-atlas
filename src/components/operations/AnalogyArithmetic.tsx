@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download, ChevronRight, ChevronDown } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -59,6 +59,7 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [results, setResults] = useState<AnalogyResult[]>([]);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
 
@@ -130,7 +131,7 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
     <div className="space-y-6">
       <div className="card-editorial p-6">
         <div className="flex items-start justify-between mb-1">
-          <h2 className="font-display text-display-md font-bold">Analogy Arithmetic</h2>
+          <h2 className="font-display text-display-md font-bold">Vector Arithmetic</h2>
           <ResetButton onReset={() => { setTermA(""); setTermB(""); setTermC(""); setResults([]); setError(null); }} />
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
@@ -274,6 +275,62 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
               internal logic diverges from the conceptual relationship you are testing.
             </p>
           </div>
+
+          <div className="thin-rule mx-5" />
+
+          {/* Technical Detail */}
+          <div className="px-5 py-3">
+            <button
+              onClick={() => setDetailOpen(!detailOpen)}
+              className="flex items-center gap-1.5 font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold hover:text-foreground transition-colors"
+            >
+              {detailOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Technical Detail
+            </button>
+          </div>
+
+          {detailOpen && (
+            <div className="px-5 pb-5 space-y-3">
+              <div className="overflow-x-auto">
+                <table className="w-full font-sans text-caption">
+                  <thead>
+                    <tr className="border-b border-parchment">
+                      <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Rank</th>
+                      <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Concept</th>
+                      <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Cosine Sim to Result Vector</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-parchment">
+                    {r.nearest.map((n, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 tabular-nums">{i + 1}</td>
+                        <td className="px-2 py-1 font-medium">{n.concept}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{n.similarity.toFixed(6)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    const rows = ["rank,concept,cosine_similarity"];
+                    r.nearest.forEach((n, i) => rows.push(`${i + 1},"${n.concept}",${n.similarity.toFixed(6)}`));
+                    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `vector-arithmetic-${r.a}-${r.b}-${r.c}-${r.modelId}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="btn-editorial-ghost text-caption px-3 py-1.5"
+                >
+                  <Download size={14} className="mr-1" />Export CSV
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

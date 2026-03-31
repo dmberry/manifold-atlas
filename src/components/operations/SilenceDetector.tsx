@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, ChevronRight, ChevronDown } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -49,6 +49,7 @@ export function SilenceDetector({ onQueryTime }: SilenceDetectorProps) {
   const [customTermsA, setCustomTermsA] = useState("");
   const [customNameB, setCustomNameB] = useState("");
   const [customTermsB, setCustomTermsB] = useState("");
+  const [detailOpen, setDetailOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [results, setResults] = useState<DensityResult[]>([]);
@@ -291,6 +292,60 @@ export function SilenceDetector({ onQueryTime }: SilenceDetectorProps) {
               begins and the grounding ends.
             </p>
           </div>
+
+          <div className="thin-rule mx-5" />
+
+          {/* Technical Detail */}
+          <div className="px-5 py-3">
+            <button
+              onClick={() => setDetailOpen(!detailOpen)}
+              className="flex items-center gap-1.5 font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold hover:text-foreground transition-colors"
+            >
+              {detailOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Technical Detail
+            </button>
+          </div>
+
+          {detailOpen && (
+            <div className="px-5 pb-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted rounded-sm p-2.5">
+                  <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider">{r.domainA.name}</div>
+                  <div className="font-sans text-body-sm font-bold tabular-nums mt-0.5">Avg pairwise sim: {r.domainA.avgPairwiseSim.toFixed(6)}</div>
+                  <div className="font-sans text-caption text-muted-foreground">{r.domainA.termCount} terms, {r.domainA.termCount * (r.domainA.termCount - 1) / 2} pairs</div>
+                </div>
+                <div className="bg-muted rounded-sm p-2.5">
+                  <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider">{r.domainB.name}</div>
+                  <div className="font-sans text-body-sm font-bold tabular-nums mt-0.5">Avg pairwise sim: {r.domainB.avgPairwiseSim.toFixed(6)}</div>
+                  <div className="font-sans text-caption text-muted-foreground">{r.domainB.termCount} terms, {r.domainB.termCount * (r.domainB.termCount - 1) / 2} pairs</div>
+                </div>
+              </div>
+              <div className="bg-muted rounded-sm p-2.5">
+                <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider">Density Ratio</div>
+                <div className="font-sans text-body-sm font-bold tabular-nums mt-0.5">{r.densityRatio.toFixed(6)}</div>
+                <div className="font-sans text-caption text-muted-foreground">
+                  {r.densityRatio > 1 ? `${r.domainA.name} is ${r.densityRatio.toFixed(2)}x denser (more compressed)` : `${r.domainB.name} is ${(1/r.densityRatio).toFixed(2)}x denser (more compressed)`}
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    const rows = [`domain,avg_pairwise_similarity,term_count`, `"${r.domainA.name}",${r.domainA.avgPairwiseSim.toFixed(6)},${r.domainA.termCount}`, `"${r.domainB.name}",${r.domainB.avgPairwiseSim.toFixed(6)},${r.domainB.termCount}`];
+                    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `silence-detector-${r.modelId}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="btn-editorial-ghost text-caption px-3 py-1.5"
+                >
+                  <Download size={14} className="mr-1" />Export CSV
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

@@ -29,7 +29,7 @@ Run a battery of 10-40 negation tests automatically against pre-built sets (poli
 ### Semantic Sectioning
 Interpolate between two anchor concepts in the embedding space to discover what lies between them. The tool walks from concept A to concept B in 20 steps, finding the nearest real concept at each point. The resulting sequence (e.g. solidarity -> cooperation -> agreement -> conformity -> compliance) reveals where one domain shades into another in the manifold's geometry.
 
-### Concept Drift
+### Vector Drift
 Measure how much context warps the manifold's positioning of a concept. Embed the same term with different contextual framings ("justice", "justice in the context of punishment", "justice in the context of mercy") and watch it move through the geometry. Three visualisations per model: a 3D drift cloud showing all positions simultaneously with connecting lines back to the bare concept; sorted displacement bars showing which contexts are most geometrically powerful; and a pairwise pathway heatmap revealing which contextual framings converge (similar routes through the manifold) and which diverge.
 
 ### Hegemony Compass
@@ -44,7 +44,7 @@ Enter a list of concepts and get a full pairwise cosine similarity heatmap acros
 ### Agonism Test
 Does the manifold preserve genuine philosophical opposition, or collapse it into proximity? Eight pre-loaded debates (Marx vs Burke, Hegel vs Kierkegaard, Arendt vs Schmitt, Foucault vs Aristotle, and more). The agonism score measures how much intellectual conflict survives geometrisation. This is the negation deficit extended from logic to philosophical antagonism.
 
-### Analogy Arithmetic
+### Vector Arithmetic
 The classic word2vec operation (A - B + C = ?) applied to modern embedding models with critical intent. "King minus man plus woman equals queen" was the original demonstration. Pre-loaded analogies include "capitalism minus exploitation plus cooperation equals ?" and "technology minus efficiency plus care equals ?". Tests whether the manifold's geometry preserves conceptual relationships that critical theory depends on.
 
 ### Silence Detector

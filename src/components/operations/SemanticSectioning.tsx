@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, GitBranch } from "lucide-react";
+import { Loader2, GitBranch, Download, ChevronRight, ChevronDown } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -48,6 +48,7 @@ export function SemanticSectioning({ onQueryTime }: SemanticSectioningProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [results, setResults] = useState<SectionResult[]>([]);
+  const [detailOpen, setDetailOpen] = useState(false);
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
 
@@ -263,6 +264,64 @@ export function SemanticSectioning({ onQueryTime }: SemanticSectioningProps) {
               </p>
             </div>
           </div>
+
+          <div className="thin-rule mx-5" />
+
+          {/* Technical Detail */}
+          <div className="px-5 py-3">
+            <button
+              onClick={() => setDetailOpen(!detailOpen)}
+              className="flex items-center gap-1.5 font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold hover:text-foreground transition-colors"
+            >
+              {detailOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Technical Detail
+            </button>
+          </div>
+
+          {detailOpen && (
+            <div className="px-5 pb-5 space-y-3">
+              <div className="overflow-x-auto">
+                <table className="w-full font-sans text-caption">
+                  <thead>
+                    <tr className="border-b border-parchment">
+                      <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Step</th>
+                      <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Position</th>
+                      <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Nearest Concept</th>
+                      <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Similarity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-parchment">
+                    {r.path.map((point, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 tabular-nums">{i}</td>
+                        <td className="px-2 py-1 tabular-nums">{point.position.toFixed(2)}</td>
+                        <td className="px-2 py-1 font-medium">{point.nearestConcept}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{point.nearestSimilarity.toFixed(4)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    const rows = ["step,position,nearest_concept,cosine_similarity"];
+                    r.path.forEach((p, i) => rows.push(`${i},${p.position.toFixed(4)},"${p.nearestConcept}",${p.nearestSimilarity.toFixed(6)}`));
+                    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `semantic-sectioning-${r.anchorA}-${r.anchorB}-${r.modelId}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="btn-editorial-ghost text-caption px-3 py-1.5"
+                >
+                  <Download size={14} className="mr-1" />Export CSV
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>
