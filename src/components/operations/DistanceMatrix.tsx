@@ -8,6 +8,7 @@ import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { cosineSimilarity } from "@/lib/geometry/cosine";
 import { ResetButton } from "@/components/shared/ResetButton";
+import { BenchmarkLoader } from "@/components/shared/BenchmarkLoader";
 import { EMBEDDING_MODELS } from "@/types/embeddings";
 
 const PlotlyPlot = dynamic(
@@ -182,9 +183,12 @@ export function DistanceMatrix({ onQueryTime }: DistanceMatrixProps) {
             rows={3}
           />
           <div className="flex items-center justify-between">
-            <p className="font-sans text-caption text-muted-foreground">
-              Comma-separated concepts. The matrix shows all pairwise similarities.
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-sans text-caption text-muted-foreground flex-1">
+                Comma-separated concepts. The matrix shows all pairwise similarities.
+              </p>
+              <BenchmarkLoader onLoad={concepts => setConceptsText(concepts.join(", "))} />
+            </div>
             <button
               onClick={handleCompute}
               disabled={loading}

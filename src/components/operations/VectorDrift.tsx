@@ -477,6 +477,8 @@ function DriftModelPanel({ model, concept, variants, isDark }: {
   variants: string[];
   isDark: boolean;
 }) {
+  const driftPlotRef = useRef<PlotlyPlotHandle>(null);
+
   // Project all variant vectors to 3D
   const projection = useMemo(() => {
     return projectPCA3D(model.vectors);
@@ -643,8 +645,10 @@ function DriftModelPanel({ model, concept, variants, isDark }: {
           to the bare position. Colour indicates displacement: green is close, red is far.
           Drag to rotate.
         </p>
-        <div className="rounded-sm overflow-hidden border border-parchment" style={{ background: bgColor }}>
+        <div className="relative rounded-sm overflow-hidden border border-parchment" style={{ background: bgColor }}>
+          <Plot3DControls plotRef={driftPlotRef} exportFilename={`vector-drift-${concept}-${model.modelId}`} />
           <PlotlyPlot
+            ref={driftPlotRef}
             data={traces}
             layout={layout}
             config={{ displayModeBar: false, responsive: true, scrollZoom: true }}

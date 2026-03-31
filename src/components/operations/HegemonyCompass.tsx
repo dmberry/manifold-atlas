@@ -8,6 +8,7 @@ import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { cosineSimilarity } from "@/lib/geometry/cosine";
 import { ResetButton } from "@/components/shared/ResetButton";
+import { BenchmarkLoader } from "@/components/shared/BenchmarkLoader";
 import { EMBEDDING_MODELS } from "@/types/embeddings";
 
 const PlotlyPlot = dynamic(
@@ -283,6 +284,10 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
               placeholder="Enter a concept to plot, e.g. freedom, justice, efficiency"
               className="input-editorial flex-1"
               onKeyDown={e => e.key === "Enter" && handleAddConcept()}
+            />
+            <BenchmarkLoader
+              label="Benchmark"
+              onLoad={concepts => plotConcepts(concepts)}
             />
             <button
               onClick={handleAddConcept}

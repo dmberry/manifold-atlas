@@ -12,6 +12,7 @@ import { autoClusters, proximityEdges } from "@/lib/geometry/clusters";
 import { ScatterPlot } from "@/components/viz/ScatterPlot";
 import { PRESETS, type ConceptGroup } from "@/components/shared/ConceptPresets";
 import { ResetButton } from "@/components/shared/ResetButton";
+import { BenchmarkLoader } from "@/components/shared/BenchmarkLoader";
 import { EMBEDDING_MODELS } from "@/types/embeddings";
 import type { NeighbourhoodMapResult, NeighbourhoodPoint } from "@/types/embeddings";
 
@@ -305,6 +306,12 @@ export function NeighbourhoodMap({ onQueryTime }: NeighbourhoodMapProps) {
               <Plus size={14} className="mr-1" />
               Add Group
             </button>
+            <BenchmarkLoader
+              label="Benchmark"
+              onLoad={concepts => {
+                setGroups([{ id: nextGroupId++, name: "Benchmark", terms: concepts.join(", ") }]);
+              }}
+            />
             <button
               onClick={() => setShowPresets(!showPresets)}
               className="btn-editorial-ghost text-body-sm px-3 py-1.5"
