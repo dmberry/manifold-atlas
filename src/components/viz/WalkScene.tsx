@@ -29,9 +29,10 @@ interface WalkSceneProps {
   progress: number; // 0 to steps.length - 1
   onProgressChange: (p: number) => void;
   isDark: boolean;
+  rideDistance: number;
 }
 
-function scaleCoords(coords: [number, number, number], scale = 10): [number, number, number] {
+function scaleCoords(coords: [number, number, number], scale = 5): [number, number, number] {
   return [coords[0] * scale, coords[1] * scale, coords[2] * scale];
 }
 
@@ -188,7 +189,7 @@ function NearbyLines({ from, tos, color }: {
   );
 }
 
-function Scene({ steps, anchorA, anchorB, anchorCoords, referencePoints, walking, firstPerson, progress, isDark }: Omit<WalkSceneProps, "onProgressChange">) {
+function Scene({ steps, anchorA, anchorB, anchorCoords, referencePoints, walking, firstPerson, progress, isDark, rideDistance }: Omit<WalkSceneProps, "onProgressChange">) {
   const currentStep = steps[progress] || steps[0];
   const nearby = currentStep?.nearby || [];
   const nearbySet = new Set(nearby.map(n => n.coordIdx));
@@ -208,13 +209,13 @@ function Scene({ steps, anchorA, anchorB, anchorCoords, referencePoints, walking
   const dz = nextScaled[2] - currentScaled[2];
   const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.1;
   const cameraTarget: [number, number, number] = [
-    currentScaled[0] - (dx / len) * 1.5,
-    currentScaled[1] - (dy / len) * 1.5,
-    currentScaled[2] + 0.5,
+    currentScaled[0] - (dx / len) * rideDistance,
+    currentScaled[1] - (dy / len) * rideDistance,
+    currentScaled[2] + rideDistance * 0.3,
   ];
   const cameraLookAt: [number, number, number] = [
-    currentScaled[0] + (dx / len) * 1,
-    currentScaled[1] + (dy / len) * 1,
+    currentScaled[0] + (dx / len) * rideDistance * 0.6,
+    currentScaled[1] + (dy / len) * rideDistance * 0.6,
     currentScaled[2],
   ];
 
@@ -304,6 +305,7 @@ function CameraZoomHandler({ zoomRef }: { zoomRef: React.MutableRefObject<((fact
 export function WalkScene(props: WalkSceneProps) {
   const bgColor = props.isDark ? "#0a0a1a" : "#f5f2ec";
   const [crashed, setCrashed] = useState(false);
+  const [rideDistance, setRideDistance] = useState(1.5);
   const zoomRef = useRef<((factor: number) => void) | null>(null);
 
   if (crashed) {
@@ -325,12 +327,18 @@ export function WalkScene(props: WalkSceneProps) {
       {/* Zoom buttons */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
         <button
-          onClick={() => zoomRef.current?.(0.8)}
+          onClick={() => {
+            if (props.firstPerson) setRideDistance(d => Math.max(0.3, d * 0.7));
+            else zoomRef.current?.(0.8);
+          }}
           className="w-7 h-7 rounded-sm bg-card/80 border border-parchment-dark text-foreground hover:bg-card flex items-center justify-center font-sans text-body-sm font-bold shadow-editorial"
           title="Zoom in"
         >+</button>
         <button
-          onClick={() => zoomRef.current?.(1.25)}
+          onClick={() => {
+            if (props.firstPerson) setRideDistance(d => Math.min(8, d * 1.4));
+            else zoomRef.current?.(1.25);
+          }}
           className="w-7 h-7 rounded-sm bg-card/80 border border-parchment-dark text-foreground hover:bg-card flex items-center justify-center font-sans text-body-sm font-bold shadow-editorial"
           title="Zoom out"
         >−</button>
