@@ -128,12 +128,12 @@ export function ConceptDrift({ onQueryTime }: ConceptDriftProps) {
           <ResetButton onReset={() => { setConcept(""); setContextsText(""); setResult(null); setError(null); }} />
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
-          How much does context warp the manifold? Embed the same concept in different
-          propositional sentences and watch it move through the geometry. Use full claims
-          rather than bare phrases: &ldquo;Justice requires that the punishment fit the
-          crime&rdquo; produces a sharper embedding than &ldquo;justice in the context of
-          punishment.&rdquo; The 3D drift cloud shows all positions simultaneously; the
-          pathway heatmap reveals which framings converge and which diverge.
+          How much does context displace a concept in the manifold? Embed the same
+          concept in different propositional sentences and watch its position shift.
+          Use full claims rather than bare phrases: &ldquo;Justice requires that the
+          punishment fit the crime&rdquo; produces a sharper embedding than &ldquo;justice
+          in the context of punishment.&rdquo; The 3D drift cloud shows all positions
+          simultaneously; the pathway heatmap reveals which framings converge and which diverge.
         </p>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
