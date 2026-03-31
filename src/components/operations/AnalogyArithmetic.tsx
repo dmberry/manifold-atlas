@@ -11,7 +11,7 @@ import { EMBEDDING_MODELS } from "@/types/embeddings";
 import { similarityColor } from "@/lib/similarity-scale";
 
 const PRESETS = [
-  { a: "man", b: "king", c: "woman", label: "king - man + woman = ? (classic word2vec)" },
+  { a: "king", b: "man", c: "woman", label: "king - man + woman = ?" },
   { a: "capitalism", b: "exploitation", c: "cooperation", label: "capitalism - exploitation + cooperation = ?" },
   { a: "democracy", b: "participation", c: "authoritarianism", label: "democracy - participation + authoritarianism = ?" },
   { a: "science", b: "objectivity", c: "art", label: "science - objectivity + art = ?" },
@@ -63,8 +63,8 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
   const embedAll = useEmbedAll();
 
   const handleCompute = async (overrideA?: string, overrideB?: string, overrideC?: string) => {
-    const a = overrideA || termA.trim() || "man";
-    const b = overrideB || termB.trim() || "king";
+    const a = overrideA || termA.trim() || "king";
+    const b = overrideB || termB.trim() || "man";
     const c = overrideC || termC.trim() || "woman";
     if (!termA.trim() && !overrideA) setTermA(a);
     if (!termB.trim() && !overrideB) setTermB(b);
@@ -89,8 +89,8 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
           const vecC = vectors[2];
           const refVectors = vectors.slice(3);
 
-          // Compute: B - A + C (the classic analogy operation)
-          const resultVec = vecA.map((_, d) => vecB[d] - vecA[d] + vecC[d]);
+          // Compute: A - B + C (the classic analogy operation: king - man + woman = queen)
+          const resultVec = vecA.map((_, d) => vecA[d] - vecB[d] + vecC[d]);
 
           // Find nearest reference concepts
           const similarities = REFERENCE_VOCAB.map((concept, i) => ({
@@ -135,46 +135,49 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
           The classic word2vec operation applied to modern embedding models with critical intent.
-          Compute B &minus; A + C and find what the manifold produces. &ldquo;King minus man plus
+          Compute A &minus; B + C and find what the manifold produces. &ldquo;King minus man plus
           woman equals queen&rdquo; was the original demonstration. What happens when you apply
           transformations that encode political arguments as vector arithmetic?
         </p>
 
         <div className="space-y-3">
-          {/* Formula display */}
+          {/* Live formula preview */}
           <div className="bg-muted rounded-sm p-3 text-center font-sans text-body-lg">
-            <span className="font-bold text-burgundy">{termB || "B"}</span>
+            <span className="font-bold text-burgundy">{termA || "A"}</span>
             <span className="text-muted-foreground mx-2">&minus;</span>
-            <span className="font-bold">{termA || "A"}</span>
+            <span className="font-bold">{termB || "B"}</span>
             <span className="text-muted-foreground mx-2">+</span>
             <span className="font-bold">{termC || "C"}</span>
             <span className="text-muted-foreground mx-2">=</span>
             <span className="font-bold text-gold">?</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-sans text-caption text-muted-foreground mb-1">A (subtract this)</label>
+          {/* Input boxes following A - B + C = ? with operators between them */}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block font-sans text-caption text-muted-foreground mb-1">A</label>
               <input
                 type="text"
                 value={termA}
                 onChange={e => setTermA(e.target.value)}
-                placeholder="man"
-                className="input-editorial text-body-sm"
-              />
-            </div>
-            <div>
-              <label className="block font-sans text-caption text-muted-foreground mb-1">B (start here)</label>
-              <input
-                type="text"
-                value={termB}
-                onChange={e => setTermB(e.target.value)}
                 placeholder="king"
                 className="input-editorial text-body-sm"
               />
             </div>
-            <div>
-              <label className="block font-sans text-caption text-muted-foreground mb-1">C (add this)</label>
+            <span className="font-sans text-display-md font-bold text-muted-foreground pb-2.5">&minus;</span>
+            <div className="flex-1">
+              <label className="block font-sans text-caption text-muted-foreground mb-1">B</label>
+              <input
+                type="text"
+                value={termB}
+                onChange={e => setTermB(e.target.value)}
+                placeholder="man"
+                className="input-editorial text-body-sm"
+              />
+            </div>
+            <span className="font-sans text-display-md font-bold text-muted-foreground pb-2.5">+</span>
+            <div className="flex-1">
+              <label className="block font-sans text-caption text-muted-foreground mb-1">C</label>
               <input
                 type="text"
                 value={termC}
@@ -182,6 +185,10 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
                 placeholder="woman"
                 className="input-editorial text-body-sm"
               />
+            </div>
+            <span className="font-sans text-display-md font-bold text-muted-foreground pb-2.5">=</span>
+            <div className="flex-shrink-0 pb-2.5">
+              <span className="font-sans text-display-md font-bold text-gold">?</span>
             </div>
           </div>
 
@@ -222,9 +229,9 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
           {/* Formula with result */}
           <div className="px-5 py-4">
             <div className="bg-muted rounded-sm p-4 text-center font-sans text-body-lg mb-4">
-              <span className="font-bold text-burgundy">{r.b}</span>
+              <span className="font-bold text-burgundy">{r.a}</span>
               <span className="text-muted-foreground mx-2">&minus;</span>
-              <span className="font-bold">{r.a}</span>
+              <span className="font-bold">{r.b}</span>
               <span className="text-muted-foreground mx-2">+</span>
               <span className="font-bold">{r.c}</span>
               <span className="text-muted-foreground mx-2">&asymp;</span>
@@ -262,7 +269,7 @@ export function AnalogyArithmetic({ onQueryTime }: AnalogyArithmeticProps) {
           <div className="px-5 py-4">
             <p className="font-body text-body-sm text-slate italic">
               The result shows which concept in the reference vocabulary is closest to the
-              computed vector B &minus; A + C. If the analogy holds in the geometry, the top
+              computed vector A &minus; B + C. If the analogy holds in the geometry, the top
               result should complete the proportion. If it does not, the manifold&apos;s
               internal logic diverges from the conceptual relationship you are testing.
             </p>
