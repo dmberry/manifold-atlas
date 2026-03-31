@@ -53,6 +53,21 @@ export function ScatterPlot({ modelName, providerId, points, method, dimensions,
   const rafRef = useRef<number | null>(null);
 
   const startRotation = useCallback(() => {
+    // Capture current camera to preserve zoom and elevation
+    let r = 2.2;
+    let z = 0.8;
+
+    const handle = plotRef.current;
+    if (handle) {
+      const div = handle.getDiv() as any;
+      if (div?._fullLayout?.scene?.camera?.eye) {
+        const eye = div._fullLayout.scene.camera.eye;
+        r = Math.sqrt(eye.x * eye.x + eye.y * eye.y);
+        z = eye.z;
+        angleRef.current = (Math.atan2(eye.y, eye.x) * 180) / Math.PI;
+      }
+    }
+
     const step = () => {
       const plotHandle = plotRef.current;
       if (!plotHandle) { rafRef.current = requestAnimationFrame(step); return; }
@@ -62,13 +77,12 @@ export function ScatterPlot({ modelName, providerId, points, method, dimensions,
 
       angleRef.current += 0.3;
       const radians = (angleRef.current * Math.PI) / 180;
-      const r = 2.2;
 
       Plotly.relayout(div, {
         "scene.camera.eye": {
           x: r * Math.cos(radians),
           y: r * Math.sin(radians),
-          z: 0.6 + 0.3 * Math.sin(radians * 0.3),
+          z,
         },
       });
 

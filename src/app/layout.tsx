@@ -5,7 +5,6 @@
  */
 
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Libre_Baskerville, Source_Serif_4, Inter } from "next/font/google";
 import "./globals.css";
 
@@ -48,14 +47,13 @@ export default function RootLayout({
       className={`${libreBaskerville.variable} ${sourceSerif.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
-      <head />
-      <Script
-        id="dark-mode-init"
-        strategy="beforeInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `(function(){try{var s=localStorage.getItem('manifold-atlas-settings');if(s&&JSON.parse(s).darkMode)document.documentElement.classList.add('dark')}catch(e){}})()`,
-        }}
-      />
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('manifold-atlas-settings');if(s&&JSON.parse(s).darkMode)document.documentElement.classList.add('dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="font-body antialiased bg-ivory text-ink selection:bg-burgundy/20 selection:text-burgundy-900">
         {children}
       </body>
