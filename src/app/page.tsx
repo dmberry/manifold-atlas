@@ -25,6 +25,7 @@ import { NegationGauge } from "@/components/operations/NegationGauge";
 import { NegationBattery } from "@/components/operations/NegationBattery";
 import { SemanticSectioning } from "@/components/operations/SemanticSectioning";
 import { ConceptDrift } from "@/components/operations/VectorDrift";
+import { VectorWalk } from "@/components/operations/VectorWalk";
 import { HegemonyCompass } from "@/components/operations/HegemonyCompass";
 import { AgonismTest } from "@/components/operations/AgonismTest";
 import { SohnRethelTest } from "@/components/operations/SohnRethelTest";
@@ -65,6 +66,9 @@ function AppContent() {
         </div>
         <div className={activeTab === "drift" ? "" : "hidden"}>
           <ConceptDrift onQueryTime={setLastQueryTime} />
+        </div>
+        <div className={activeTab === "walk" ? "" : "hidden"}>
+          <VectorWalk onQueryTime={setLastQueryTime} />
         </div>
         <div className={activeTab === "compass" ? "" : "hidden"}>
           <HegemonyCompass onQueryTime={setLastQueryTime} />

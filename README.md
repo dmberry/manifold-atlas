@@ -3,7 +3,7 @@
 **Comparative geometry of AI vector spaces.**
 
 **Author:** David M. Berry
-**Version:** 0.4.0
+**Version:** 0.5.0
 **Date:** 31 March 2026
 
 Manifold Atlas is a vector-native research tool for studying how large language models organise meaning geometrically. It uses embedding APIs from multiple AI providers to collect coordinates from the manifold, then computes distances, clusters, and projections that reveal the geometry's structure.
@@ -28,6 +28,9 @@ Run a battery of 10-40 negation tests automatically against pre-built sets (poli
 
 ### Semantic Sectioning
 Interpolate between two anchor concepts in the embedding space to discover what lies between them. The tool walks from concept A to concept B in 20 steps, finding the nearest real concept at each point. The resulting sequence (e.g. solidarity -> cooperation -> agreement -> conformity -> compliance) reveals where one domain shades into another in the manifold's geometry.
+
+### Vector Walk
+Watch a particle walk through the manifold from one concept to another. The path is a linear interpolation in the high-dimensional embedding space, projected to 3D. At each step, the nearest real concept from a reference vocabulary is identified. Press Walk to animate the particle along the path, showing what the manifold places between the two endpoints. Includes a concept sequence showing the full path as text.
 
 ### Vector Drift
 Measure how much context warps the manifold's positioning of a concept. Embed the same term with different contextual framings ("justice", "justice in the context of punishment", "justice in the context of mercy") and watch it move through the geometry. Three visualisations per model: a 3D drift cloud showing all positions simultaneously with connecting lines back to the bare concept; sorted displacement bars showing which contexts are most geometrically powerful; and a pairwise pathway heatmap revealing which contextual framings converge (similar routes through the manifold) and which diverge.
