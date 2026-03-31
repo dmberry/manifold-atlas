@@ -110,7 +110,7 @@ function RefDot({ position, label, isNearby, rank, isDark }: {
   rank: number; // 0 = nearest, higher = further
   isDark: boolean;
 }) {
-  const size = isNearby ? Math.max(0.04, 0.1 - rank * 0.008) : 0.025;
+  const size = isNearby ? Math.max(0.04, 0.1 - rank * 0.008) : 0.015;
   const fontSize = isNearby ? Math.max(0.06, 0.12 - rank * 0.008) : 0;
 
   return (
@@ -118,11 +118,11 @@ function RefDot({ position, label, isNearby, rank, isDark }: {
       <mesh>
         <sphereGeometry args={[size, 12, 12]} />
         <meshStandardMaterial
-          color={isNearby ? "#d4a017" : (isDark ? "#555566" : "#aaa099")}
+          color={isNearby ? "#d4a017" : (isDark ? "#444455" : "#ccc4b8")}
           emissive={isNearby ? "#d4a017" : "#000000"}
           emissiveIntensity={isNearby ? 0.4 : 0}
           transparent
-          opacity={isNearby ? 0.95 : 0.2}
+          opacity={isNearby ? 0.95 : 0.08}
         />
       </mesh>
       {isNearby && (
