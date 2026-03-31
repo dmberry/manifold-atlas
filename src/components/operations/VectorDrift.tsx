@@ -31,6 +31,33 @@ const DEFAULT_CONTEXTS = [
   "Restorative justice focuses on repairing harm rather than imposing punishment",
 ];
 
+/**
+ * Generate sentence sensitivity phrasings for any concept.
+ * Tests how different linguistic framings of the same concept
+ * displace it in the manifold.
+ */
+function generateSensitivityVariants(concept: string): string[] {
+  const c = concept.trim();
+  const capitalised = c.charAt(0).toUpperCase() + c.slice(1);
+  return [
+    c,
+    `the concept of ${c}`,
+    `the meaning of ${c}`,
+    `${capitalised} is a fundamental value`,
+    `${capitalised} is an important idea in contemporary thought`,
+    `what we mean when we talk about ${c}`,
+    `the definition of ${c} in philosophy`,
+    `${c} as understood in everyday language`,
+    `the absence of ${c}`,
+    `the opposite of ${c}`,
+    `${capitalised} is essential to a good society`,
+    `${capitalised} is a contested and ambiguous concept`,
+    `the history of ${c} as an idea`,
+    `${c} according to the Western philosophical tradition`,
+    `${c} in non-Western thought`,
+  ];
+}
+
 interface DriftModelResult {
   modelId: string;
   modelName: string;
@@ -54,7 +81,9 @@ interface ConceptDriftProps {
 }
 
 export function ConceptDrift({ onQueryTime }: ConceptDriftProps) {
+  const [mode, setMode] = useState<"drift" | "sensitivity">("drift");
   const [concept, setConcept] = useState("");
+  const [sensitivityConcepts, setSensitivityConcepts] = useState("");
   const [contextsText, setContextsText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -64,6 +93,10 @@ export function ConceptDrift({ onQueryTime }: ConceptDriftProps) {
   const isDark = settings.darkMode;
 
   const handleCompute = async () => {
+    if (mode === "sensitivity") {
+      return handleSensitivity();
+    }
+
     const effectiveConcept = concept.trim() || DEFAULT_CONCEPT;
     if (!concept.trim()) setConcept(DEFAULT_CONCEPT);
 
@@ -120,50 +153,142 @@ export function ConceptDrift({ onQueryTime }: ConceptDriftProps) {
     }
   };
 
+  const handleSensitivity = async () => {
+    const defaultConcepts = "justice, freedom, democracy, truth, labour";
+    const conceptList = (sensitivityConcepts.trim() || defaultConcepts)
+      .split(",").map(s => s.trim()).filter(s => s);
+    if (!sensitivityConcepts.trim()) setSensitivityConcepts(defaultConcepts);
+
+    setLoading(true);
+    setError(null);
+    const start = performance.now();
+
+    try {
+      // Process each concept: generate variants, embed, compute drift
+      // Show results for the first concept fully, then summary for others
+      const firstConcept = conceptList[0];
+      const variants = generateSensitivityVariants(firstConcept);
+
+      // Set the main concept and contexts so the drift panel renders
+      setConcept(firstConcept);
+      setContextsText(variants.join("\n"));
+
+      const modelVectors = await embedAll(variants);
+      const enabledModels = getEnabledModels();
+
+      const models: DriftModelResult[] = enabledModels
+        .filter(m => modelVectors.has(m.id))
+        .map(m => {
+          const vectors = modelVectors.get(m.id)!;
+          const baseVec = vectors[0];
+
+          const drifts = variants.map((variant, i) => {
+            const sim = cosineSimilarity(baseVec, vectors[i]);
+            return { variant, similarity: sim, displacement: 1 - sim };
+          });
+
+          const pairwise: number[][] = [];
+          for (let i = 0; i < vectors.length; i++) {
+            pairwise[i] = [];
+            for (let j = 0; j < vectors.length; j++) {
+              pairwise[i][j] = cosineSimilarity(vectors[i], vectors[j]);
+            }
+          }
+
+          const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
+          return { modelId: m.id, modelName: spec?.name || m.id, vectors, drifts, pairwise };
+        });
+
+      setResult({ concept: firstConcept, variants, models });
+      onQueryTime((performance.now() - start) / 1000);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="card-editorial p-6">
         <div className="flex items-start justify-between mb-1">
           <h2 className="font-display text-display-md font-bold">Vector Drift</h2>
-          <ResetButton onReset={() => { setConcept(""); setContextsText(""); setResult(null); setError(null); }} />
+          <ResetButton onReset={() => { setConcept(""); setContextsText(""); setSensitivityConcepts(""); setResult(null); setError(null); }} />
         </div>
         <p className="font-sans text-body-sm text-slate mb-4">
-          How much does context displace a concept in the manifold? Embed the same
-          concept in different propositional sentences and watch its position shift.
-          Use full claims rather than bare phrases: &ldquo;Justice requires that the
-          punishment fit the crime&rdquo; produces a sharper embedding than &ldquo;justice
-          in the context of punishment.&rdquo; The 3D drift cloud shows all positions
-          simultaneously; the pathway heatmap reveals which framings converge and which diverge.
+          How much does context displace a concept in the manifold? Two modes:
+          Contextual Drift embeds one concept in different propositional sentences.
+          Sentence Sensitivity tests how different phrasings of the same concept
+          (bare word, definition, proposition, negation) produce different positions,
+          revealing the embedding model&apos;s sensitivity to linguistic framing.
         </p>
         <div className="space-y-3">
+          {/* Mode toggle */}
           <div className="flex items-center gap-3">
-            <Waypoints size={20} className="text-slate flex-shrink-0" />
-            <input
-              type="text"
-              value={concept}
-              onChange={e => setConcept(e.target.value)}
-              placeholder={DEFAULT_CONCEPT}
-              className="input-editorial flex-1"
-            />
+            <label className="font-sans text-body-sm text-slate">Mode:</label>
+            <select
+              value={mode}
+              onChange={e => setMode(e.target.value as "drift" | "sensitivity")}
+              className="input-editorial w-auto py-1.5 px-3 text-body-sm"
+            >
+              <option value="drift">Contextual Drift</option>
+              <option value="sensitivity">Sentence Sensitivity</option>
+            </select>
           </div>
-          <textarea
-            value={contextsText}
-            onChange={e => setContextsText(e.target.value)}
-            placeholder={DEFAULT_CONTEXTS.join("\n")}
-            className="input-editorial min-h-[120px] resize-y text-body-sm"
-            rows={6}
-          />
-          <div className="flex items-center justify-between">
-            <p className="font-sans text-caption text-muted-foreground">
-              One variant per line. First line is the bare concept. Remaining lines should be
-              full propositional sentences that situate the concept in different domains.
-            </p>
+
+          {mode === "drift" ? (
+            <>
+              <div className="flex items-center gap-3">
+                <Waypoints size={20} className="text-slate flex-shrink-0" />
+                <input
+                  type="text"
+                  value={concept}
+                  onChange={e => setConcept(e.target.value)}
+                  placeholder={DEFAULT_CONCEPT}
+                  className="input-editorial flex-1"
+                />
+              </div>
+              <textarea
+                value={contextsText}
+                onChange={e => setContextsText(e.target.value)}
+                placeholder={DEFAULT_CONTEXTS.join("\n")}
+                className="input-editorial min-h-[120px] resize-y text-body-sm"
+                rows={6}
+              />
+              <p className="font-sans text-caption text-muted-foreground">
+                One variant per line. First line is the bare concept. Remaining lines should be
+                full propositional sentences that situate the concept in different domains.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <Waypoints size={20} className="text-slate flex-shrink-0" />
+                <input
+                  type="text"
+                  value={sensitivityConcepts}
+                  onChange={e => setSensitivityConcepts(e.target.value)}
+                  placeholder="justice, freedom, democracy, truth, labour"
+                  className="input-editorial flex-1"
+                />
+              </div>
+              <p className="font-sans text-caption text-muted-foreground">
+                Comma-separated concepts. For each one, the tool auto-generates 15 phrasings
+                (bare word, definition, proposition, negation, cultural context) and measures
+                how far each phrasing displaces the concept from its bare position. This
+                reveals whether the embedding model treats the word and the sentence
+                as the same geometric position or different ones.
+              </p>
+            </>
+          )}
+
+          <div className="flex justify-end">
             <button
               onClick={handleCompute}
               disabled={loading}
               className="btn-editorial-primary disabled:opacity-50"
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : "Test Drift"}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : mode === "drift" ? "Test Drift" : "Test Sensitivity"}
             </button>
           </div>
         </div>

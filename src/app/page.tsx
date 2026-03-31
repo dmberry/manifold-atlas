@@ -24,7 +24,7 @@ import { NeighbourhoodMap } from "@/components/operations/NeighbourhoodMap";
 import { NegationGauge } from "@/components/operations/NegationGauge";
 import { NegationBattery } from "@/components/operations/NegationBattery";
 import { SemanticSectioning } from "@/components/operations/SemanticSectioning";
-import { ConceptDrift } from "@/components/operations/ConceptDrift";
+import { ConceptDrift } from "@/components/operations/VectorDrift";
 import { HegemonyCompass } from "@/components/operations/HegemonyCompass";
 import { AgonismTest } from "@/components/operations/AgonismTest";
 import { SohnRethelTest } from "@/components/operations/SohnRethelTest";
