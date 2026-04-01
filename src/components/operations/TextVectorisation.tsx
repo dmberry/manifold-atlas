@@ -28,7 +28,7 @@ const TextWalkScene = dynamic(
 const TEXT_PRESETS: Array<{ label: string; text: string; source: string }> = [
   {
     label: "Hinton (1977)",
-    source: "Geoffrey Hinton, PhD thesis, 1977",
+    source: "Geoffrey Hinton, 'Relaxation and its Role in Vision', 1977",
     text: `Using reduced descriptions it is possible to see the landscape of the nervous system as a space in which each concept or each state of affairs is a point and the distance between points represents how different the concepts are. Similarity becomes distance and knowing becomes a matter of finding the right place in the space. The knowledge is not in the individual connections but in the positions of the points relative to each other.`,
   },
   {

@@ -94,7 +94,7 @@ const HINTON_MESSAGES = [
 ];
 
 // The Hinton 1977 quote - displayed on first activation
-const HINTON_1977 = `"I think the reason the notion of exchange value has seemed so difficult and esoteric to economists is precisely because it cannot be defined in terms of the physical properties of objects. It has to be defined in terms of the social institution of the market. The concept of a distributed representation [...] is very like the concept of exchange value: just as the value of an object is determined by its relationships to all other objects on the market, so the meaning of a word is determined by its relationships to all other words."\n\n— Geoffrey Hinton, Lecture notes (1977)\n\nCf. Karl Marx, Capital Vol. 1, Ch. 1: "the exchange of commodities is evidently an act characterised by a total abstraction from use-value."`;
+const HINTON_1977 = `"I think the reason the notion of exchange value has seemed so difficult and esoteric to economists is precisely because it cannot be defined in terms of the physical properties of objects. It has to be defined in terms of the social institution of the market. The concept of a distributed representation [...] is very like the concept of exchange value: just as the value of an object is determined by its relationships to all other objects on the market, so the meaning of a word is determined by its relationships to all other words."\n\n— Geoffrey Hinton, 'Relaxation and its Role in Vision' (1977)\n\nCf. Karl Marx, Capital Vol. 1, Ch. 1: "the exchange of commodities is evidently an act characterised by a total abstraction from use-value."`;
 
 // Marx quotes with vector theory commentary
 const MARX_MESSAGES = [
