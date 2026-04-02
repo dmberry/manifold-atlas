@@ -686,10 +686,42 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
   const isDark = settings.darkMode;
 
   const handleCompute = async (overrideConcepts?: string[]) => {
-    const concepts = overrideConcepts || conceptsText
-      .split(/[,\n]/)
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+    let concepts: string[];
+
+    if (overrideConcepts) {
+      concepts = overrideConcepts;
+    } else {
+      // Parse textarea: ## headers define topic groups, sentences below belong to that topic
+      const lines = conceptsText.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+      concepts = [];
+      const topicMap = new Map<string, { presetIdx: number; label: string }>();
+      let currentTopic: string | null = null;
+      let topicIdx = 0;
+
+      for (const line of lines) {
+        if (line.startsWith("## ")) {
+          currentTopic = line.slice(3).trim();
+          topicIdx++;
+        } else {
+          // Split by comma if no headers are being used
+          const items = line.includes(",") && !currentTopic ? line.split(",").map(s => s.trim()).filter(s => s) : [line];
+          for (const item of items) {
+            if (item.length > 0) {
+              concepts.push(item);
+              if (currentTopic) {
+                topicMap.set(item, { presetIdx: topicIdx - 1, label: currentTopic });
+              }
+            }
+          }
+        }
+      }
+
+      if (topicMap.size > 0) {
+        setConceptTopics(topicMap);
+      } else {
+        setConceptTopics(new Map());
+      }
+    }
 
     if (concepts.length < 5) {
       setError(new Error("Need at least 5 concepts for meaningful topology."));
@@ -745,7 +777,7 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
           <textarea
             value={conceptsText}
             onChange={e => setConceptsText(e.target.value)}
-            placeholder="Enter propositional sentences separated by commas or newlines (e.g. 'Democracy means collective self-governance', 'Freedom is the absence of coercion')..."
+            placeholder={"## Topic A\nSentence one about topic A\nSentence two about topic A\n\n## Topic B\nSentence one about topic B\n\n(Use ## headers to define topic groups, or just enter sentences without headers)"}
             rows={4}
             className="input-editorial w-full resize-y"
           />
@@ -766,27 +798,29 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
                     const next = new Set(activePresets);
                     if (next.has(i)) next.delete(i); else next.add(i);
                     setActivePresets(next);
-                    if (next.size === 1) {
-                      setConceptTopics(new Map());
-                      const idx = [...next][0];
-                      setConceptsText(TOPOLOGY_PRESETS[idx].concepts.join("\n"));
-                      handleCompute(TOPOLOGY_PRESETS[idx].concepts);
-                    } else if (next.size > 1) {
-                      // Build topic map and merge concepts
+                    if (next.size >= 1) {
+                      // Build markdown with ## headers for each preset
+                      const lines: string[] = [];
                       const all: string[] = [];
                       const topicMap = new Map<string, { presetIdx: number; label: string }>();
                       let colorIdx = 0;
-                      for (const idx of next) {
-                        for (const concept of TOPOLOGY_PRESETS[idx].concepts) {
+                      for (const idx of [...next]) {
+                        const preset = TOPOLOGY_PRESETS[idx];
+                        lines.push(`## ${preset.label}`);
+                        for (const concept of preset.concepts) {
+                          lines.push(concept);
                           if (!topicMap.has(concept)) {
                             all.push(concept);
-                            topicMap.set(concept, { presetIdx: colorIdx, label: TOPOLOGY_PRESETS[idx].label });
+                            if (next.size > 1) {
+                              topicMap.set(concept, { presetIdx: colorIdx, label: preset.label });
+                            }
                           }
                         }
+                        lines.push("");
                         colorIdx++;
                       }
-                      setConceptTopics(topicMap);
-                      setConceptsText(all.join("\n"));
+                      setConceptTopics(next.size > 1 ? topicMap : new Map());
+                      setConceptsText(lines.join("\n").trim());
                       handleCompute(all);
                     }
                   }}
