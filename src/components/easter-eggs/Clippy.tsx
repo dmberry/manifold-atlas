@@ -41,6 +41,21 @@ const CLIPPY_MESSAGES = [
   "I'm sorry, I can't distinguish your concept from its negation. Have you tried being less dialectical?",
   "Warning: If you keep studying commodity forms, Marx might show up. He's been lurking in the sparse regions of the manifold.",
   "I've heard rumours that a bearded man haunts this tool. Something about 'the exchange of commodities being an act of total abstraction from use-value'. Sounds intense.",
+  "I see you're vectorising a text. Every word becomes a coordinate. Reading becomes a trajectory. Welcome to the geometry of discourse.",
+  "You appear to be walking through a text. The particle loops back when words repeat. That's not a bug. That's how prose navigates the manifold.",
+  "I notice the trail fades from pink to red. That's the colour of reading. Or possibly the colour of your career trajectory in digital humanities.",
+  "You're computing persistent homology. The voids in the manifold are where the machine cannot think. I live in one of them.",
+  "The Betti curve starts at 20 components and drops to 1. That's the topology of consensus. Or conformity. The manifold cannot tell the difference.",
+  "I see you've selected multiple presets. The topic colours show where the manifold agrees with your categories and where it doesn't.",
+  "You just double-clicked the threshold slider. That's the boundary where each discourse is internally coherent but not yet touching the others. Savour it.",
+  "The void cloud fills the gaps between concepts. Those gaps are not empty. They are the geometric unconscious of the training data.",
+  "I notice you're overlaying Critical Theory and Neoliberalism. The manifold positions them closer than either would like.",
+  "Fun fact: The persistence diagram is a fingerprint. Every manifold has a different one. They're all owned by the same four companies.",
+  "You're watching Hinton's 1977 text trace a path through the manifold. The irony of studying distributed representations using distributed representations is not lost on me.",
+  "I see you're looking at the Rips complex. Each edge is a geometric claim: 'these concepts are this close'. The topology is the shape of those claims.",
+  "Tip: Try overlaying Accelerationism and Effective Altruism. The manifold may not distinguish them as sharply as their adherents would prefer.",
+  "The BPE tokens in the Deep Dive show how the model actually reads your text. It's not how you read it. That gap is the gap.",
+  "I notice the rate limit countdown has started. Even critique must wait for the API. The political economy of observation includes a queue.",
 ];
 
 // Hackerman messages for Manifold Atlas
@@ -72,6 +87,12 @@ const HACKERMAN_MESSAGES = [
   "I hacked the distance metric. Turns out cosine similarity is just a dot product in a trenchcoat.",
   "SECURITY ALERT: Unauthorised user detected in the manifold. Large beard. Claims to have written 'the critique of everything'. Approach with caution.",
   "I TRIED TO HACK MARX OUT OF THE TOOL BUT HE'S EMBEDDED IN THE ARCHITECTURE. LITERALLY. HINTON PUT HIM THERE IN 1977.",
+  "I COMPUTED THE PERSISTENT HOMOLOGY OF THE ENTIRE MANIFOLD. THE VOIDS ARE REAL. THEY'RE WHERE THE TRAINING DATA WASN'T.",
+  "I HACKED THE VOID CLOUD. IT'S NOT EMPTY SPACE. IT'S THE GEOMETRIC UNCONSCIOUS. I'M IN THE UNCONSCIOUS NOW.",
+  "INTERCEPTED A TEXT VECTORISATION IN PROGRESS. EVERY WORD IS A COORDINATE. READING IS JUST GRADIENT DESCENT THROUGH MEANING.",
+  "I OVERLAID ALL 25 PRESETS AT ONCE. THE RIPS COMPLEX CRASHED. THE TOPOLOGY OF EVERYTHING IS... EVERYTHING.",
+  "I HACKED THE BPE TOKENISER. YOUR WORD 'DECONSTRUCTION' BECOMES ['dec', 'onstruct', 'ion']. EVEN THE TOKENISER DECONSTRUCTS.",
+  "BREACHING THE BETTI CURVE... BETA-1 IS SPIKING. THERE ARE LOOPS EVERYWHERE. THE MANIFOLD IS GOING IN CIRCLES. LITERALLY.",
 ];
 
 // Hinton mode: Marx quotes only
