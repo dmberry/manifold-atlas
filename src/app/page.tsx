@@ -38,7 +38,6 @@ import { Clippy } from "@/components/easter-eggs/Clippy";
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>("distance");
   const [lastQueryTime, setLastQueryTime] = useState<number | undefined>(undefined);
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header />

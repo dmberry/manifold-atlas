@@ -11,6 +11,8 @@
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Loader2, ChevronRight, ChevronDown, Download } from "lucide-react";
+import { RateLimitError } from "@/lib/embeddings/client";
+import { useRateLimitCountdown } from "@/components/shared/useRateLimitCountdown";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -684,6 +686,7 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
   const { settings, getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
   const isDark = settings.darkMode;
+  const { countdown, isWaiting, startCountdown } = useRateLimitCountdown();
 
   const handleCompute = async (overrideConcepts?: string[]) => {
     let concepts: string[];
@@ -747,6 +750,9 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
       setResults(newResults);
       onQueryTime((performance.now() - start) / 1000);
     } catch (e) {
+      if (e instanceof RateLimitError) {
+        startCountdown(e);
+      }
       setError(e);
     } finally {
       setLoading(false);
@@ -784,7 +790,7 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
           <div className="flex items-center gap-3 flex-wrap">
             <button onClick={() => handleCompute()} disabled={loading || !conceptsText.trim()}
               className="btn-editorial-primary disabled:opacity-50">
-              {loading ? <Loader2 size={16} className="animate-spin" /> : "Compute Topology"}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : isWaiting ? `Wait ${countdown}s` : "Compute Topology"}
             </button>
             <BenchmarkLoader onLoad={(concepts) => { setConceptsText(concepts.join(", ")); setActivePresets(new Set()); setConceptTopics(new Map()); }} />
           </div>

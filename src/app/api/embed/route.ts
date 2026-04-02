@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[embed] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Pass through 429 status so client can detect rate limits
+    const status = message.includes("(429)") || message.includes("rate limit") ? 429 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

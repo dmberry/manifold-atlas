@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Loader2, Download, ChevronRight, ChevronDown } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
+import { RateLimitError } from "@/lib/embeddings/client";
+import { useRateLimitCountdown } from "@/components/shared/useRateLimitCountdown";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { cosineSimilarity } from "@/lib/geometry/cosine";
 import { SimilarityBridge } from "@/components/viz/SimilarityBridge";
@@ -55,6 +57,7 @@ export function SilenceDetector({ onQueryTime }: SilenceDetectorProps) {
   const [results, setResults] = useState<DensityResult[]>([]);
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
+  const { countdown, isWaiting, startCountdown } = useRateLimitCountdown();
 
   const handleCompute = async () => {
     let domainA: DomainSpec, domainB: DomainSpec;
@@ -119,6 +122,7 @@ export function SilenceDetector({ onQueryTime }: SilenceDetectorProps) {
       setResults(newResults);
       onQueryTime((performance.now() - start) / 1000);
     } catch (e) {
+      if (e instanceof RateLimitError) startCountdown(e);
       setError(e);
     } finally {
       setLoading(false);
@@ -219,7 +223,7 @@ export function SilenceDetector({ onQueryTime }: SilenceDetectorProps) {
               disabled={loading}
               className="btn-editorial-primary disabled:opacity-50"
             >
-              {loading ? <><Loader2 size={16} className="animate-spin mr-2" />Measuring density...</> : "Detect Silence"}
+              {loading ? <><Loader2 size={16} className="animate-spin mr-2" />Measuring density...</> : isWaiting ? `Wait ${countdown}s` : "Detect Silence"}
             </button>
           </div>
         </div>
