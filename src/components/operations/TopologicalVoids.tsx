@@ -942,16 +942,38 @@ function TopologyResultCard({ result, isDark, conceptTopics }: { result: Topolog
               onChange={e => setThreshold(Number(e.target.value))}
               onDoubleClick={() => {
                 if (conceptTopics.size === 0) return;
-                // Find the max intra-topic edge distance (where each topic is most connected internally)
-                let maxIntra = 0;
+                // Find the threshold where each topic is internally connected
+                // using ONLY intra-topic edges (no shortcuts through other topics).
+                const topicMembers = new Map<string, Set<number>>();
+                result.concepts.forEach((c, i) => {
+                  const t = conceptTopics.get(c);
+                  if (!t) return;
+                  if (!topicMembers.has(t.label)) topicMembers.set(t.label, new Set());
+                  topicMembers.get(t.label)!.add(i);
+                });
+                const parent = result.concepts.map((_, i) => i);
+                const find = (x: number): number => parent[x] === x ? x : (parent[x] = find(parent[x]));
+
                 for (const edge of result.filtrationEdges) {
                   const topicA = conceptTopics.get(result.concepts[edge.i]);
                   const topicB = conceptTopics.get(result.concepts[edge.j]);
-                  if (topicA && topicB && topicA.label === topicB.label) {
-                    maxIntra = Math.max(maxIntra, edge.distance);
+                  // Only merge within same topic
+                  if (!topicA || !topicB || topicA.label !== topicB.label) continue;
+                  if (find(edge.i) !== find(edge.j)) {
+                    parent[find(edge.i)] = find(edge.j);
+                  }
+                  // Check: is every topic now a single component?
+                  let allConnected = true;
+                  for (const [, members] of topicMembers) {
+                    const roots = new Set<number>();
+                    for (const m of members) roots.add(find(m));
+                    if (roots.size > 1) { allConnected = false; break; }
+                  }
+                  if (allConnected) {
+                    setThreshold(edge.distance);
+                    return;
                   }
                 }
-                if (maxIntra > 0) setThreshold(maxIntra);
               }}
               title={conceptTopics.size > 0 ? "Double-click to snap to max intra-topic threshold" : ""}
               className="flex-1 h-1.5 bg-parchment rounded-full appearance-none cursor-pointer accent-burgundy"
