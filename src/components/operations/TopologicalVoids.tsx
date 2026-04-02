@@ -786,7 +786,7 @@ export function TopologicalVoids({ onQueryTime }: TopologicalVoidsProps) {
               className="btn-editorial-primary disabled:opacity-50">
               {loading ? <Loader2 size={16} className="animate-spin" /> : "Compute Topology"}
             </button>
-            <BenchmarkLoader onLoad={(concepts) => setConceptsText(concepts.join(", "))} />
+            <BenchmarkLoader onLoad={(concepts) => { setConceptsText(concepts.join(", ")); setActivePresets(new Set()); setConceptTopics(new Map()); }} />
           </div>
           <div className="flex flex-wrap gap-1">
             {TOPOLOGY_PRESETS.map((p, i) => {
