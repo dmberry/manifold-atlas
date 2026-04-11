@@ -7,7 +7,7 @@ import { useEmbeddingCache } from "@/context/EmbeddingCacheContext";
 import { EMBEDDING_PROVIDERS, type EmbeddingProviderId } from "@/types/embeddings";
 
 export function SettingsPanel() {
-  const { settings, settingsOpen, setSettingsOpen, updateProvider } = useSettings();
+  const { settings, settingsOpen, setSettingsOpen, updateProvider, hfModels } = useSettings();
   const { cacheSize, clearCache } = useEmbeddingCache();
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
@@ -133,7 +133,7 @@ export function SettingsPanel() {
                           Models
                         </label>
                         <div className="space-y-1.5">
-                          {provider.models.map(model => (
+                          {(pid === "huggingface" ? hfModels : provider.models).map(model => (
                             <label
                               key={model.id}
                               className="flex items-center gap-2 cursor-pointer"

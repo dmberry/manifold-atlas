@@ -5,6 +5,7 @@ import type { AppSettings, ProviderSettings } from "@/types/settings";
 import type { EmbeddingProviderId, EmbeddingModelSpec } from "@/types/embeddings";
 import { DEFAULT_SETTINGS, STORAGE_KEY } from "@/types/settings";
 import { EMBEDDING_MODELS, EMBEDDING_PROVIDERS } from "@/types/embeddings";
+import { loadHuggingFaceModels } from "@/lib/hf-models";
 
 interface SettingsContextType {
   settings: AppSettings;
@@ -13,6 +14,7 @@ interface SettingsContextType {
   setNegationThreshold: (threshold: number) => void;
   setRankedModels: (ranked: string[]) => void;
   getEnabledModels: () => Array<EmbeddingModelSpec & { apiKey: string; baseUrl?: string }>;
+  hfModels: EmbeddingModelSpec[];
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
 }
@@ -23,6 +25,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [hfModels, setHfModels] = useState<EmbeddingModelSpec[]>([]);
 
   // Load from localStorage + .env.local fallback on mount
   useEffect(() => {
@@ -74,6 +77,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.warn("Failed to load settings:", e);
       }
+
+      // Load HuggingFace model list from markdown
+      const hf = await loadHuggingFaceModels();
+      if (hf.length > 0) setHfModels(hf);
+
       setLoaded(true);
     };
     load();
@@ -148,8 +156,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const provider = EMBEDDING_PROVIDERS[pid];
       if (!provider) continue;
 
+      const modelPool = pid === "huggingface"
+        ? hfModels
+        : EMBEDDING_MODELS.filter(m => m.providerId === pid);
+
       for (const modelId of providerSettings.selectedModels) {
-        const model = EMBEDDING_MODELS.find(m => m.id === modelId && m.providerId === pid);
+        const model = modelPool.find(m => m.id === modelId);
         if (model) {
           results.push({
             ...model,
@@ -176,7 +188,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (ranked.length > 0) return ranked;
     }
     return results;
-  }, [settings]);
+  }, [settings, hfModels]);
 
   return (
     <SettingsContext.Provider
@@ -187,6 +199,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setNegationThreshold,
         setRankedModels,
         getEnabledModels,
+        hfModels,
         settingsOpen,
         setSettingsOpen,
       }}
