@@ -12,7 +12,7 @@ export async function embedHuggingFace(
 ): Promise<number[][]> {
   // HF Inference API: POST to the feature-extraction pipeline
   const response = await fetch(
-    `https://router.huggingface.co/hf-inference/pipeline/feature-extraction/${model}`,
+    `https://router.huggingface.co/hf-inference/models/${model}/pipeline/feature-extraction`,
     {
       method: "POST",
       headers: {

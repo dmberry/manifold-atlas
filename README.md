@@ -83,7 +83,7 @@ You only need to configure the providers you want to use. Enable one or more and
 
 | Provider | Models | Sign up |
 |----------|--------|---------|
-| Hugging Face | MiniLM-L6 (384d), BGE Small (384d), Nomic Embed v1.5 (768d) | [huggingface.co](https://huggingface.co/) |
+| Hugging Face | MiniLM-L6 (384d), BGE Small/Large (384d/1024d), Nomic Embed v1.5 (768d), Mixedbread Large (1024d), Multilingual E5 Large (1024d), GTE Qwen2 1.5B (1536d) | [huggingface.co](https://huggingface.co/) |
 
 To use Hugging Face: sign up at [huggingface.co](https://huggingface.co/) (free), go to Settings > Access Tokens, create a token, and paste it in Manifold Atlas Settings. Rate-limited but fully functional for research use.
 
@@ -130,6 +130,22 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 3. Enter your API key (or for Ollama, ensure it's running with an embedding model pulled: `ollama pull nomic-embed-text`)
 4. Select which models to use
 5. Close settings and start querying
+
+### Adding or Removing Models
+
+Model lists for every provider are defined in simple markdown files under `public/models/`. There is one file per provider: `openai.md`, `voyage.md`, `google.md`, `cohere.md`, `huggingface.md`, and `ollama.md`. To add a new model, open the relevant file and add a line in this format:
+
+```
+model-id | Display Name | dimensions
+```
+
+For example, to add a new HuggingFace embedding model:
+
+```
+BAAI/bge-m3 | BGE M3 (1024d) | 1024
+```
+
+Save the file and reload the app. No code changes or rebuilds are needed. Lines starting with `#` are comments and are ignored. This keeps the app in step with the pace of model releases without requiring source edits.
 
 ### Using Ollama (Local, Free)
 
