@@ -27,19 +27,9 @@ export interface EmbeddingProviderConfig {
   models: EmbeddingModelSpec[];
 }
 
-export const EMBEDDING_MODELS: EmbeddingModelSpec[] = [
-  { id: "text-embedding-3-small", name: "OpenAI Small (1536d)", providerId: "openai", dimensions: 1536 },
-  { id: "text-embedding-3-large", name: "OpenAI Large (3072d)", providerId: "openai", dimensions: 3072 },
-  { id: "voyage-3", name: "Voyage 3 (1024d)", providerId: "voyage", dimensions: 1024 },
-  { id: "voyage-3-large", name: "Voyage 3 Large (1024d)", providerId: "voyage", dimensions: 1024 },
-  { id: "voyage-3.5", name: "Voyage 3.5 (1024d)", providerId: "voyage", dimensions: 1024 },
-  { id: "gemini-embedding-001", name: "Gemini Embedding (3072d)", providerId: "google", dimensions: 3072 },
-  { id: "embed-v3.0", name: "Cohere Embed v3 (1024d)", providerId: "cohere", dimensions: 1024 },
-  // HuggingFace models are loaded dynamically from public/models/huggingface.md
-  { id: "nomic-embed-text", name: "Nomic Embed Text", providerId: "ollama", dimensions: 768 },
-  { id: "mxbai-embed-large", name: "mxbai Embed Large", providerId: "ollama", dimensions: 1024 },
-  { id: "all-minilm", name: "All-MiniLM", providerId: "ollama", dimensions: 384 },
-];
+// Model lists are loaded dynamically from public/models/{provider}.md
+// Edit those files to add or remove models without touching source code.
+export const EMBEDDING_MODELS: EmbeddingModelSpec[] = [];
 
 export const EMBEDDING_PROVIDERS: Record<EmbeddingProviderId, EmbeddingProviderConfig> = {
   openai: {

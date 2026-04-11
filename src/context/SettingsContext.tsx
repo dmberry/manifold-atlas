@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { AppSettings, ProviderSettings } from "@/types/settings";
 import type { EmbeddingProviderId, EmbeddingModelSpec } from "@/types/embeddings";
 import { DEFAULT_SETTINGS, STORAGE_KEY } from "@/types/settings";
-import { EMBEDDING_MODELS, EMBEDDING_PROVIDERS } from "@/types/embeddings";
-import { loadHuggingFaceModels } from "@/lib/hf-models";
+import { EMBEDDING_PROVIDERS } from "@/types/embeddings";
+import { loadAllProviderModels } from "@/lib/provider-models";
 
 interface SettingsContextType {
   settings: AppSettings;
@@ -14,7 +14,7 @@ interface SettingsContextType {
   setNegationThreshold: (threshold: number) => void;
   setRankedModels: (ranked: string[]) => void;
   getEnabledModels: () => Array<EmbeddingModelSpec & { apiKey: string; baseUrl?: string }>;
-  hfModels: EmbeddingModelSpec[];
+  providerModels: Partial<Record<EmbeddingProviderId, EmbeddingModelSpec[]>>;
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
 }
@@ -25,7 +25,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [hfModels, setHfModels] = useState<EmbeddingModelSpec[]>([]);
+  const [providerModels, setProviderModels] = useState<Partial<Record<EmbeddingProviderId, EmbeddingModelSpec[]>>>({});
 
   // Load from localStorage + .env.local fallback on mount
   useEffect(() => {
@@ -78,9 +78,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.warn("Failed to load settings:", e);
       }
 
-      // Load HuggingFace model list from markdown
-      const hf = await loadHuggingFaceModels();
-      if (hf.length > 0) setHfModels(hf);
+      // Load model lists from markdown files for all providers
+      const loaded = await loadAllProviderModels();
+      if (Object.keys(loaded).length > 0) setProviderModels(loaded);
 
       setLoaded(true);
     };
@@ -156,9 +156,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const provider = EMBEDDING_PROVIDERS[pid];
       if (!provider) continue;
 
-      const modelPool = pid === "huggingface"
-        ? hfModels
-        : EMBEDDING_MODELS.filter(m => m.providerId === pid);
+      const modelPool = providerModels[pid] ?? provider.models;
 
       for (const modelId of providerSettings.selectedModels) {
         const model = modelPool.find(m => m.id === modelId);
@@ -188,7 +186,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (ranked.length > 0) return ranked;
     }
     return results;
-  }, [settings, hfModels]);
+  }, [settings, providerModels]);
 
   return (
     <SettingsContext.Provider
@@ -199,7 +197,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setNegationThreshold,
         setRankedModels,
         getEnabledModels,
-        hfModels,
+        providerModels,
         settingsOpen,
         setSettingsOpen,
       }}

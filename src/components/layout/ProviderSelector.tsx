@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Circle, X } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
-import { EMBEDDING_PROVIDERS, EMBEDDING_MODELS, type EmbeddingProviderId } from "@/types/embeddings";
+import { EMBEDDING_PROVIDERS, type EmbeddingProviderId } from "@/types/embeddings";
 
 export function ProviderSelector() {
-  const { settings, updateProvider, setRankedModels } = useSettings();
+  const { settings, updateProvider, setRankedModels, providerModels } = useSettings();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -27,8 +27,9 @@ export function ProviderSelector() {
     if (!provider) continue;
     // Skip if provider requires API key but none is configured
     if (provider.requiresApiKey && !ps.apiKey) continue;
+    const models = providerModels[pid as EmbeddingProviderId] ?? provider.models;
     for (const mid of ps.selectedModels) {
-      const spec = EMBEDDING_MODELS.find(m => m.id === mid && m.providerId === pid);
+      const spec = models.find(m => m.id === mid);
       if (spec) {
         allEnabled.push({
           providerId: pid as EmbeddingProviderId,
@@ -41,8 +42,12 @@ export function ProviderSelector() {
   }
 
   const ranked = settings.rankedModels || [];
-  const primaryId = ranked[0] || null;
-  const secondaryId = ranked[1] || null;
+  // Auto-rank: if no ranking set and exactly one model is enabled, treat it as primary
+  const effectiveRanked = ranked.length === 0 && allEnabled.length === 1
+    ? [allEnabled[0].modelId]
+    : ranked;
+  const primaryId = effectiveRanked[0] || null;
+  const secondaryId = effectiveRanked[1] || null;
   const primaryModel = primaryId ? allEnabled.find(m => m.modelId === primaryId) : null;
   const secondaryModel = secondaryId ? allEnabled.find(m => m.modelId === secondaryId) : null;
 
@@ -170,9 +175,9 @@ export function ProviderSelector() {
 
                   {ps.enabled && (
                     <div className="space-y-0.5 ml-1">
-                      {provider.models.map(model => {
+                      {(providerModels[pid] ?? provider.models).map(model => {
                         const isSelected = ps.selectedModels.includes(model.id);
-                        const rankIdx = ranked.indexOf(model.id);
+                        const rankIdx = effectiveRanked.indexOf(model.id);
                         const rankNum = rankIdx >= 0 ? rankIdx + 1 : null;
 
                         return (
@@ -188,7 +193,7 @@ export function ProviderSelector() {
                                   : [...ps.selectedModels, model.id];
                                 updateProvider(pid, { selectedModels: selected });
                                 // Remove from ranking if deselected
-                                if (isSelected && ranked.includes(model.id)) {
+                                if (isSelected && effectiveRanked.includes(model.id)) {
                                   removeRank(model.id);
                                 }
                               }}
