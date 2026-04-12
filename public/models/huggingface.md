@@ -7,8 +7,9 @@ Lines starting with # are comments and are ignored.
 
 sentence-transformers/all-MiniLM-L6-v2 | MiniLM-L6 (384d) | 384
 BAAI/bge-small-en-v1.5 | BGE Small (384d) | 384
-BAAI/bge-large-en-v1.5 | BGE Large (1024d) | 1024
-nomic-ai/nomic-embed-text-v1.5 | Nomic Embed v1.5 (768d) | 768
+# BGE Large can be slow to respond (cold-start on free tier)
+BAAI/bge-large-en-v1.5 | BGE Large (1024d, slow) | 1024
 mixedbread-ai/mxbai-embed-large-v1 | Mixedbread Large (1024d) | 1024
 intfloat/multilingual-e5-large | Multilingual E5 Large (1024d) | 1024
-Alibaba-NLP/gte-Qwen2-1.5B-instruct | GTE Qwen2 1.5B (1536d) | 1536
+Qwen/Qwen3-Embedding-0.6B | Qwen3 Embedding 0.6B (1024d) | 1024
+ibm-granite/granite-embedding-278m-multilingual | Granite Embedding 278M Multilingual (768d) | 768

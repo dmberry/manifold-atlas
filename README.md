@@ -83,7 +83,7 @@ You only need to configure the providers you want to use. Enable one or more and
 
 | Provider | Models | Sign up |
 |----------|--------|---------|
-| Hugging Face | MiniLM-L6 (384d), BGE Small/Large (384d/1024d), Nomic Embed v1.5 (768d), Mixedbread Large (1024d), Multilingual E5 Large (1024d), GTE Qwen2 1.5B (1536d) | [huggingface.co](https://huggingface.co/) |
+| Hugging Face | MiniLM-L6 (384d), BGE Small (384d), BGE Large (1024d, slow), Mixedbread Large (1024d), Multilingual E5 Large (1024d), Qwen3 Embedding 0.6B (1024d), Granite Embedding 278M Multilingual (768d) | [huggingface.co](https://huggingface.co/) |
 
 To use Hugging Face: sign up at [huggingface.co](https://huggingface.co/) (free), go to Settings > Access Tokens, create a token, and paste it in Manifold Atlas Settings. Rate-limited but fully functional for research use.
 
