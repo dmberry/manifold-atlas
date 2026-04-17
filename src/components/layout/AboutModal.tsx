@@ -144,18 +144,7 @@ export function AboutModal() {
                       className="text-burgundy underline underline-offset-2 hover:text-burgundy-900"
                     >
                       Vector Lab
-                    </a>. <strong>Manifold Atlas maps the terrain between models.</strong>{" "}
-                    It is cartographic where its sibling{" "}
-                    <a href="https://github.com/vector-lab-tools/manifoldscope" target="_blank" rel="noopener noreferrer" className="text-burgundy underline underline-offset-2">Manifoldscope</a>{" "}
-                    is anatomical: the two instruments treat the same object at different scales.
-                  </p>
-                  <p className="mt-2">
-                    <a href="https://github.com/vector-lab-tools/vectorscope" target="_blank" rel="noopener noreferrer" className="text-burgundy underline underline-offset-2">Vectorscope</a>{" "}
-                    explains the internal geometry of a single model.{" "}
-                    <a href="https://github.com/vector-lab-tools/theoryscope" target="_blank" rel="noopener noreferrer" className="text-burgundy underline underline-offset-2">Theoryscope</a>{" "}
-                    stands apart in its object, addressing the geometry of meso structures in vector space rather than the geometry of a model.{" "}
-                    <a href="https://github.com/vector-lab-tools/LLMbench" target="_blank" rel="noopener noreferrer" className="text-burgundy underline underline-offset-2">LLMbench</a>{" "}
-                    is oriented to the hermeneutic reading of generated prose, the level at which models are usually encountered; it sits above the geometric instruments and is often the presentation layer for findings that begin lower down.
+                    </a>. <strong>Manifold Atlas maps the terrain between models.</strong>
                   </p>
                 </div>
               </div>
