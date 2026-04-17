@@ -3,14 +3,62 @@
 **Comparative geometry of AI vector spaces.**
 
 **Author:** David M. Berry
+**Institution:** University of Sussex
 **Version:** 0.9.2
 **Date:** 16 April 2026
+**Licence:** MIT
 
 Manifold Atlas is a vector-native research tool for studying how large language models organise meaning geometrically. It uses embedding APIs from multiple AI providers to collect coordinates from the manifold, then computes distances, clusters, and projections that reveal the geometry's structure.
 
 ![Manifold Atlas - Neighbourhood Map](docs/screenshot-neighbourhood.png)
 
 The tool operationalises [Vector Theory](https://stunlaw.blogspot.com/2026/02/vector-theory.html) theorised by David M. Berry. This includes the embedding API as telescope, the manifold as the object of study, and cosine similarity as the primary instrument. Without the framework, the numbers are curiosities. With it, they are evidence for geometric ideology, the negation deficit, and the proprietary encoding of human language.
+
+> Manifold Atlas is part of the [Vector Lab](https://github.com/dmberry) family of research instruments, alongside [Vectorscope](https://github.com/dmberry/vectorscope), [LLMbench](https://github.com/dmberry/LLMbench), and [Theoryscope](https://github.com/dmberry/theoryscope). The four tools share an editorial design system, an open-weight-friendly methodology, and a commitment to making the geometry of meaning legible for critical analysis. They diverge in their object: Manifold Atlas compares output geometries between models, Vectorscope inspects the internals of a single open-weight model, Theoryscope maps the geometry of a corpus of theoretical texts, and LLMbench reads the surface of model outputs as prose.
+
+## Scholarly Context
+
+Manifold Atlas emerges from the convergence of three research programmes.
+
+**Vector theory.** Berry (2026) *Vector Theory* argues that the vectorial turn introduces a new computational regime in which definition is replaced by position, truth by orientation, argument by interpolation, and contradiction by cosine proximity. The embedding layer performs a real abstraction at the level of meaning itself: heterogeneous language is converted into homogeneous geometric coordinates within a proprietary manifold. Manifold Atlas is the research instrument for this framework.
+
+**The negation deficit and geometric ideology.** A sustained claim across the Stunlaw blog series is that the manifold's geometry encodes ideology topologically (in density, sparsity, and trajectory) rather than discursively. Negation is not a logical operator in the manifold; it is a small rotation in a few dimensions. Agonism collapses into proximity. These are empirical claims and they need an empirical instrument to test them. The Negation Gauge, Negation Battery, Hegemony Compass, Silence Detector, and Agonism Test each operationalise a specific claim of the theory.
+
+**Comparative, multi-model method.** No single embedding API offers a window onto "the manifold." Each API returns a particular geometry shaped by training data, architecture, and commercial decisions. Multi-model comparison is not a nice-to-have; it is the methodological precondition for distinguishing structural features of the vectorial regime from features contingent on a particular model. Manifold Atlas is built to compare geometries rather than to pick one.
+
+## Embedding Models vs Chat Models: A Primer
+
+Manifold Atlas uses two kinds of AI model, and it helps to understand the difference.
+
+A **chat model** (GPT-4o, Claude, Llama) takes text in and produces **text** out. You give it a prompt, it generates a response. The output is language.
+
+An **embedding model** (text-embedding-3-small, nomic-embed-text) takes text in and produces a **vector** out: a list of numbers (e.g. 768 or 3,072 floating-point values). No language comes back, just coordinates in a high-dimensional space. Those coordinates are the model's geometric encoding of what the text "means", where meaning is reduced to position. The embedding model is the telescope: it converts text into a location in the manifold.
+
+Both are built from transformer architectures trained on large corpora. A chat model has an embedding layer internally (it converts tokens to vectors as its first step), but then processes those vectors through many more layers and converts back to language. An embedding model stops earlier: it produces the vector and hands it to you. This is why embedding API calls are cheap (fractions of a penny) while chat API calls are expensive.
+
+In Manifold Atlas, the **embedding models** are the core instrument. Every operation uses them to produce vectors for analysis. The **chat model** is only used for one feature: Manifold Scan, where it generates ~300 related terms from a seed concept. If you are using Ollama locally, you need an embedding model (e.g. `nomic-embed-text`) for all operations, and a chat model (e.g. `llama3.2`) only if you want to use Manifold Scan.
+
+## Operations at a Glance
+
+Manifold Atlas is organised as a tabbed workspace with fifteen operations. Each operation tests a specific claim of vector theory.
+
+| Operation | Core question | Theoretical anchor |
+|---|---|---|
+| Concept Distance | How close are A and B in the manifold? | Cosine similarity as primary instrument |
+| Neighbourhood Map | What is the local structure around a concept? | Geometric ideology (density and sparsity) |
+| Negation Gauge | How much space does negation actually get? | The negation deficit |
+| Negation Battery | Does the deficit hold across a set of statements? | The negation deficit at scale |
+| Semantic Sectioning | What lies between two concepts? | Manifold sectioning |
+| Vector Walk | What does a trajectory through the manifold look like? | Reading as geometric trajectory |
+| Vector Drift | How does context displace a concept? | Geometric stress testing |
+| Hegemony Compass | Which ideological framing has the geometry naturalised? | Hegemonic defaults |
+| Real Abstraction Test | How complete is the real abstraction? | Real abstraction (Sohn-Rethel) |
+| Distance Matrix | Where do multiple models disagree most? | Proprietary medium (multi-model) |
+| Agonism Test | Does philosophical opposition survive geometrisation? | Agonism collapse |
+| Vector Logic | Can analogical inference be performed as arithmetic? | A − B + C = ? as critical test |
+| Silence Detector | Which domains does the geometry flatten? | The taxonomy of silence |
+| Text Vectorisation | What is the shape of reading through the manifold? | Reading as geometric trajectory |
+| Persistent Homology | What can the geometry not represent? | The unthinkable of the machine |
 
 ## Features
 
@@ -105,6 +153,18 @@ To use Hugging Face: sign up at [huggingface.co](https://huggingface.co/) (free)
 
 To use Ollama, install it from [ollama.com](https://ollama.com/), pull an embedding model (`ollama pull nomic-embed-text`), and enable it in Settings. No API key needed. No data leaves your machine.
 
+## Design Rationale
+
+**Why multiple embedding providers?** A single embedding API returns a single geometry, and there is no way to distinguish, from within that geometry, structural features of the vectorial regime from features contingent on a particular model's training. Multi-provider support is not a nice-to-have; it is the methodological precondition for the tool's central claim. Every operation can be run across providers in parallel, and disagreements between models become the primary research finding rather than a nuisance.
+
+**Why cache in IndexedDB?** Embedding calls are cheap per call but quickly add up when a single operation queries hundreds of concepts across multiple models. The IndexedDB cache is keyed deterministically by model and text, so identical queries return instantly and previous sessions remain inspectable.
+
+**Why no engineering metrics?** Existing vector-geometry tools are designed for engineers tuning a retrieval pipeline. They answer questions like "which embedding gives the best search relevance?" Manifold Atlas answers different questions: where does this model compress what it ought to distinguish? What does the geometry refuse to represent? These are critical-theoretical questions that require geometric evidence, not benchmark scores.
+
+**Why a browser-only tool?** The instrument is for research use, not for production. Running entirely in the browser with only the embedding APIs as external dependencies keeps the deployment surface minimal and the data footprint on the researcher's own machine. API keys never leave the browser. No tracking, no telemetry.
+
+**Why editable `models/*.md` files?** The pace of embedding-model releases outruns any sensible rebuild cadence. Keeping the model registry in markdown rather than in source code lets researchers add a new provider or model as soon as it appears, without touching compiled artefacts.
+
 ## Getting Started
 
 ### Prerequisites
@@ -157,19 +217,6 @@ ollama serve
 
 Then enable Ollama in Manifold Atlas settings. No API key needed.
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router), React 19 |
-| Language | TypeScript 5 (strict) |
-| Styling | Tailwind CSS 3, CCS-WB editorial design system |
-| Visualisation | Plotly.js (GL3D), Three.js (@react-three/fiber), custom SVG |
-| Tokenisation | gpt-tokenizer (cl100k_base BPE, approximate preview) |
-| Dimensionality Reduction | umap-js (browser-side), custom PCA |
-| Caching | IndexedDB via idb |
-| Validation | Zod |
-
 ## Architecture
 
 ```
@@ -202,29 +249,49 @@ src/
 
 Embedding vectors are cached in IndexedDB (keyed by model + text, deterministic). Settings persist in localStorage. No server-side database, no authentication, no external dependencies beyond the embedding APIs themselves.
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router), React 19 |
+| Language | TypeScript 5 (strict) |
+| Styling | Tailwind CSS 3, CCS-WB editorial design system |
+| Visualisation | Plotly.js (GL3D), Three.js (@react-three/fiber), custom SVG |
+| Tokenisation | gpt-tokenizer (cl100k_base BPE, approximate preview) |
+| Dimensionality Reduction | umap-js (browser-side), custom PCA |
+| Caching | IndexedDB via idb |
+| Validation | Zod |
+
 ## Theoretical Context
 
-Manifold Atlas is a research instrument for the [vector theory](https://stunlaw.blogspot.com/2026/02/vector-theory.html) programme developed by David M. Berry. Vector theory argues that the vectorial turn introduces a new computational regime in which definition is replaced by position, truth by orientation, argument by interpolation, and contradiction by cosine proximity. The embedding layer performs a real abstraction at the level of meaning itself: heterogeneous language is converted into homogeneous geometric coordinates within a proprietary manifold.
+Manifold Atlas is a research instrument for the vector theory programme developed by David M. Berry. Vector theory argues that the vectorial turn introduces a new computational regime in which definition is replaced by position, truth by orientation, argument by interpolation, and contradiction by cosine proximity. The embedding layer performs a real abstraction at the level of meaning itself: heterogeneous language is converted into homogeneous geometric coordinates within a proprietary manifold.
 
-The tool operationalises this framework empirically. Key concepts and the features that test them:
+Each operation in the Operations at a Glance table above tests a specific claim of this framework. The embedding API is the telescope, the manifold the object of study, and cosine similarity the primary instrument. The framework, not the numbers, is what makes a given cosine similarity a finding rather than a curiosity: findings are geometric evidence for geometric ideology, the negation deficit, agonism collapse, hegemonic defaults, the taxonomy of silence, the proprietary medium, and the unthinkable of the machine.
 
-- **The embedding API as telescope** -- the embedding API returns processed, averaged representations from a separately-trained model, not a direct window into the frontier model's internal geometry. This makes the telescope metaphor more precise, not less: a telescope does not show you the star itself but light refracted through lenses. You are studying a proprietary geometry through a proprietary aperture. All fifteen operations use this as their basic research instrument.
-- **The negation deficit** -- the manifold's geometric representation of negation is structurally inadequate to the logical and dialectical weight that negation carries. Negation in the geometry is likely a small rotation in a few dimensions, drowned out by overwhelming similarity across all other dimensions. The Negation Gauge and Battery measure this empirically: not that the manifold has zero capacity for negation, but that its capacity is geometrically trivial relative to the conceptual work negation performs.
-- **Geometric ideology** -- hegemony that operates through topology (density, sparsity, trajectory) rather than discourse (propositions, narratives, interpellation). The Neighbourhood Map's cluster analysis, connection mesh, and density mapping test this.
-- **Manifold sectioning** -- cutting the geometry along critically chosen planes to reveal where one domain shades into another. Semantic Sectioning operationalises this directly.
-- **Geometric stress testing** -- embedding the same concept in different contexts to measure how the manifold displaces it under contextual pressure. Vector Drift operationalises this, including Sentence Sensitivity mode that auto-generates fifteen phrasings per concept.
-- **Real abstraction** -- the embedding layer performs Sohn-Rethel's real abstraction at the level of meaning. The Real Abstraction Test measures how far the manifold has completed this abstraction across domains, from clothing to care work.
-- **Hegemonic defaults** -- the Hegemony Compass measures which ideological framing the geometry has naturalised as the default meaning of contested concepts like "freedom" and "democracy."
-- **The taxonomy of silence** -- the Silence Detector compares how much geometric space the manifold allocates to different domains. Where terms are packed together, the geometry compresses; where they are spread apart, it distinguishes. The differential reveals which domains the geometry takes seriously.
-- **Reading as geometric trajectory** -- Text Vectorisation traces the path a text takes through the manifold word by word, revealing that reading is a geometric trajectory through semantic space. The shape of the path (its loops, jumps, and clustering) is evidence about how the manifold organises discourse.
-- **The unthinkable of the machine** -- Persistent Homology uses persistent homology to detect structural gaps in the manifold: regions where no concept exists. The void cloud makes these gaps visible as ghostly matter. Isolated conceptual islands and persistent loops reveal what the geometry cannot represent.
-- **The proprietary medium** -- every vector observed through the telescope was computed by a corporation that controls the geometry. The political economy of the method is built into its conditions of possibility. Multi-model comparison reveals whether geometric politics are structural to the medium or contingent on training decisions.
+## Roadmap
 
-For the full theoretical framework, see:
+- [x] Concept Distance, Distance Matrix, Negation Gauge, Negation Battery
+- [x] Neighbourhood Map with Manifold Scan, 3D visualisation, and cluster analysis
+- [x] Semantic Sectioning, Vector Walk (with Ride mode), Vector Drift
+- [x] Hegemony Compass, Real Abstraction Test, Agonism Test, Silence Detector
+- [x] Vector Logic (A − B + C = ?) with theoretical framing
+- [x] Text Vectorisation with reading-path trail and word-frequency analysis
+- [x] Persistent Homology with persistence diagram, barcode, Rips complex, Betti curve, void cloud
+- [x] Multi-provider support (OpenAI, Voyage, Google, Cohere, Hugging Face, Ollama, OpenRouter)
+- [x] IndexedDB cache; editable `models/*.md` registry
+- [ ] Cross-provider agreement score for every operation (structural vs contingent findings)
+- [ ] Export harness for reproducible figures with provenance metadata
+- [ ] Layer-aware extension (comparative inspection between layers of the same model)
+- [ ] Integration with Vectorscope's open-weight backend for within-model and between-model analysis in a single session
 
-- Berry, D.M. (2026) [Vector Theory](https://stunlaw.blogspot.com/2026/02/vector-theory.html). *Stunlaw*.
-- Berry, D.M. (2026) [What is Vector Space?](https://stunlaw.blogspot.com/2026/03/what-is-vector-space.html). *Stunlaw*.
-- Berry, D.M. (2026) [The Vector Medium](https://stunlaw.blogspot.com/). *Stunlaw*.
+## Related Work
+
+- Berry, D. M. (2026) 'Vector Theory', *Stunlaw*. Available at: https://stunlaw.blogspot.com/2026/02/vector-theory.html
+- Berry, D. M. (2026) 'What is Vector Space?', *Stunlaw*. Available at: https://stunlaw.blogspot.com/2026/03/what-is-vector-space.html
+- Berry, D. M. (2026) 'The Vector Medium', *Stunlaw*.
+- Berry, D. M. (2026) *Artificial Intelligence and Critical Theory*. MUP.
+- Impett, L. and Offert, F. (2026) *Vector Media*. University of Minnesota Press.
+- Sohn-Rethel, A. (1978) *Intellectual and Manual Labour: A Critique of Epistemology*. Macmillan.
 
 ## Easter Eggs
 
