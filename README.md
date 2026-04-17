@@ -1,7 +1,7 @@
-> Part of the [Vector Lab](https://github.com/vector-lab-tools) — research instruments for critical vector theory.
-> [Website and map](https://vector-lab-tools.github.io) · [Org profile](https://github.com/vector-lab-tools)
+> Part of the [Vector Lab](https://github.com/vector-lab-tools) — vector methods for vector theory.
+> [Overview and map](https://vector-lab-tools.github.io) · [Org profile](https://github.com/vector-lab-tools)
 >
-> **Tier:** comparative instrument. **Object:** output embeddings across models.
+> **Tier:** comparative model tool. **Object:** output embeddings across models.
 >
 > **Sibling instruments:** [Vectorscope](https://github.com/vector-lab-tools/vectorscope) · [Manifoldscope](https://github.com/vector-lab-tools/manifoldscope) · [Theoryscope](https://github.com/vector-lab-tools/theoryscope) · [LLMbench](https://github.com/vector-lab-tools/LLMbench)
 
@@ -20,8 +20,6 @@ Manifold Atlas is a vector-native research tool for studying how large language 
 ![Manifold Atlas - Neighbourhood Map](docs/screenshot-neighbourhood.png)
 
 The tool operationalises [Vector Theory](https://stunlaw.blogspot.com/2026/02/vector-theory.html) theorised by David M. Berry. This includes the embedding API as telescope, the manifold as the object of study, and cosine similarity as the primary instrument. Without the framework, the numbers are curiosities. With it, they are evidence for geometric ideology, the negation deficit, and the proprietary encoding of human language.
-
-> Manifold Atlas is part of the [Vector Lab](https://github.com/dmberry) family of research instruments, alongside [Vectorscope](https://github.com/dmberry/vectorscope), [LLMbench](https://github.com/dmberry/LLMbench), and [Theoryscope](https://github.com/dmberry/theoryscope). The four tools share an editorial design system, an open-weight-friendly methodology, and a commitment to making the geometry of meaning legible for critical analysis. They diverge in their object: Manifold Atlas compares output geometries between models, Vectorscope inspects the internals of a single open-weight model, Theoryscope maps the geometry of a corpus of theoretical texts, and LLMbench reads the surface of model outputs as prose.
 
 ## Scholarly Context
 
@@ -182,7 +180,7 @@ To use Ollama, install it from [ollama.com](https://ollama.com/), pull an embedd
 ### Install and Run
 
 ```bash
-git clone https://github.com/dmberry/manifold-atlas.git
+git clone https://github.com/vector-lab-tools/manifold-atlas.git
 cd manifold-atlas
 npm install
 npm run dev
