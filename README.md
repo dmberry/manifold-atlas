@@ -1,3 +1,10 @@
+> Part of the [Vector Lab](https://github.com/vector-lab-tools) — research instruments for critical vector theory.
+> [Website and map](https://vector-lab-tools.github.io) · [Org profile](https://github.com/vector-lab-tools)
+>
+> **Tier:** comparative instrument. **Object:** output embeddings across models.
+>
+> **Sibling instruments:** [Vectorscope](https://github.com/vector-lab-tools/vectorscope) · [Manifoldscope](https://github.com/vector-lab-tools/manifoldscope) · [Theoryscope](https://github.com/vector-lab-tools/theoryscope) · [LLMbench](https://github.com/vector-lab-tools/LLMbench)
+
 # Manifold Atlas
 
 **Comparative geometry of AI vector spaces.**
