@@ -28,11 +28,64 @@ import {
   computeSemanticSectioning,
   semanticSectioningHeadline,
 } from "@/lib/operations/semantic-sectioning";
+import {
+  computeNegationBattery,
+  negationBatteryHeadline,
+  resolveNegationBatteryPreset,
+} from "@/lib/operations/negation-battery";
+import {
+  computeAgonismTest,
+  agonismTestHeadline,
+  type AgonismPair,
+} from "@/lib/operations/agonism-test";
 
 export interface ExecuteStepContext {
   stepIndex: number;
   stepVectors: Map<string, number[][]>;
   enabledModels: Array<{ id: string; name: string; providerId: string }>;
+}
+
+/**
+ * Resolve battery statements from a step's inputs, mirroring the
+ * collector in inputs.ts so executor and collector stay in sync.
+ */
+function resolveBatteryStatementsForExec(inputs: Record<string, unknown>): string[] {
+  if (Array.isArray(inputs.statements)) {
+    return (inputs.statements as unknown[]).filter(
+      (s): s is string => typeof s === "string" && s.length > 0
+    );
+  }
+  const preset = typeof inputs.preset === "string" ? inputs.preset : undefined;
+  const resolved = resolveNegationBatteryPreset(preset);
+  return resolved ?? [];
+}
+
+/**
+ * Resolve agonism pairs from a step's inputs. Returns undefined so the
+ * pure function falls back to its preset logic.
+ */
+function resolveAgonismPairsForExec(
+  inputs: Record<string, unknown>
+): AgonismPair[] | undefined {
+  if (!Array.isArray(inputs.pairs)) return undefined;
+  const out: AgonismPair[] = [];
+  for (const raw of inputs.pairs as unknown[]) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const p = raw as Record<string, unknown>;
+    const label = typeof p.label === "string" ? p.label : "Custom pair";
+    const a = p.positionA as Record<string, unknown> | undefined;
+    const b = p.positionB as Record<string, unknown> | undefined;
+    if (!a || !b) continue;
+    const quoteA = typeof a.quote === "string" ? a.quote : "";
+    const quoteB = typeof b.quote === "string" ? b.quote : "";
+    if (!quoteA || !quoteB) continue;
+    out.push({
+      label,
+      positionA: { thinker: typeof a.thinker === "string" ? a.thinker : "", quote: quoteA },
+      positionB: { thinker: typeof b.thinker === "string" ? b.thinker : "", quote: quoteB },
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 /**
@@ -146,6 +199,66 @@ export function executeStep(
           elapsedMs,
           models: result.models.map(m => m.modelId),
           headline: semanticSectioningHeadline(result) as StepHeadlineMetrics,
+          details: result,
+        };
+      }
+
+      case "battery": {
+        const statements = resolveBatteryStatementsForExec(step.inputs);
+        if (statements.length === 0) {
+          throw new Error(
+            `battery step requires either "preset" (one of the NEGATION_BATTERIES keys) or an inline "statements" list`
+          );
+        }
+        const threshold =
+          typeof step.inputs.threshold === "number" ? step.inputs.threshold : undefined;
+        const result = computeNegationBattery(
+          { statements, threshold },
+          ctx.stepVectors,
+          ctx.enabledModels
+        );
+        const elapsedMs = performance.now() - started;
+        const uniqueModelIds = new Set<string>();
+        for (const row of result.statements) {
+          for (const m of row.models) uniqueModelIds.add(m.modelId);
+        }
+        return {
+          stepIndex: ctx.stepIndex,
+          step,
+          status: "done",
+          startedAt,
+          completedAt: new Date().toISOString(),
+          elapsedMs,
+          models: Array.from(uniqueModelIds),
+          headline: negationBatteryHeadline(result) as StepHeadlineMetrics,
+          details: result,
+        };
+      }
+
+      case "agonism": {
+        const pairs = resolveAgonismPairsForExec(step.inputs);
+        const preset = typeof step.inputs.preset === "string" ? step.inputs.preset : undefined;
+        const threshold =
+          typeof step.inputs.threshold === "number" ? step.inputs.threshold : undefined;
+        const result = computeAgonismTest(
+          { pairs, preset, threshold },
+          ctx.stepVectors,
+          ctx.enabledModels
+        );
+        const elapsedMs = performance.now() - started;
+        const uniqueModelIds = new Set<string>();
+        for (const row of result.pairs) {
+          for (const m of row.models) uniqueModelIds.add(m.modelId);
+        }
+        return {
+          stepIndex: ctx.stepIndex,
+          step,
+          status: "done",
+          startedAt,
+          completedAt: new Date().toISOString(),
+          elapsedMs,
+          models: Array.from(uniqueModelIds),
+          headline: agonismTestHeadline(result) as StepHeadlineMetrics,
           details: result,
         };
       }

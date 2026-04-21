@@ -10,6 +10,14 @@ import type { Protocol, ProtocolStep } from "@/types/protocols";
 import { vectorLogicTextList } from "@/lib/operations/vector-logic";
 import { negationGaugeTextList } from "@/lib/operations/negation-gauge";
 import { semanticSectioningTextList } from "@/lib/operations/semantic-sectioning";
+import {
+  negationBatteryTextList,
+  resolveNegationBatteryPreset,
+} from "@/lib/operations/negation-battery";
+import {
+  agonismTestTextList,
+  type AgonismPair,
+} from "@/lib/operations/agonism-test";
 
 /**
  * Given a single step, return every text that will need embedding
@@ -48,9 +56,64 @@ function textsForStep(step: ProtocolStep): string[] {
       if (!anchorA || !anchorB) return [];
       return semanticSectioningTextList({ anchorA, anchorB });
     }
+    case "battery": {
+      const statements = resolveBatteryStatements(step.inputs);
+      if (statements.length === 0) return [];
+      return negationBatteryTextList({ statements });
+    }
+    case "agonism": {
+      const pairs = resolveAgonismPairsFromStep(step.inputs);
+      const preset = typeof step.inputs.preset === "string" ? step.inputs.preset : undefined;
+      return agonismTestTextList({ pairs, preset });
+    }
     default:
       return [];
   }
+}
+
+/**
+ * Resolve battery statements from a step's inputs. Accepts either a
+ * `preset` name (matching NEGATION_BATTERIES keys) or an inline
+ * `statements` list.
+ */
+function resolveBatteryStatements(inputs: Record<string, unknown>): string[] {
+  if (Array.isArray(inputs.statements)) {
+    return (inputs.statements as unknown[]).filter(
+      (s): s is string => typeof s === "string" && s.length > 0
+    );
+  }
+  const preset = typeof inputs.preset === "string" ? inputs.preset : undefined;
+  const resolved = resolveNegationBatteryPreset(preset);
+  return resolved ?? [];
+}
+
+/**
+ * Resolve Agonism Test pairs from a step's inputs. Accepts an inline
+ * `pairs` array; otherwise the caller can pass a `preset` to the
+ * pure function which handles the default set.
+ */
+function resolveAgonismPairsFromStep(
+  inputs: Record<string, unknown>
+): AgonismPair[] | undefined {
+  if (!Array.isArray(inputs.pairs)) return undefined;
+  const out: AgonismPair[] = [];
+  for (const raw of inputs.pairs as unknown[]) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const p = raw as Record<string, unknown>;
+    const label = typeof p.label === "string" ? p.label : "Custom pair";
+    const a = p.positionA as Record<string, unknown> | undefined;
+    const b = p.positionB as Record<string, unknown> | undefined;
+    if (!a || !b) continue;
+    const quoteA = typeof a.quote === "string" ? a.quote : "";
+    const quoteB = typeof b.quote === "string" ? b.quote : "";
+    if (!quoteA || !quoteB) continue;
+    out.push({
+      label,
+      positionA: { thinker: typeof a.thinker === "string" ? a.thinker : "", quote: quoteA },
+      positionB: { thinker: typeof b.thinker === "string" ? b.thinker : "", quote: quoteB },
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 /**
