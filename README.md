@@ -11,8 +11,8 @@
 
 **Author:** David M. Berry
 **Institution:** University of Sussex
-**Version:** 0.9.2
-**Date:** 16 April 2026
+**Version:** 1.0.0
+**Date:** 21 April 2026
 **Licence:** MIT
 
 Manifold Atlas is a vector-native research tool for studying how large language models organise meaning geometrically. It uses embedding APIs from multiple AI providers to collect coordinates from the manifold, then computes distances, clusters, and projections that reveal the geometry's structure.
