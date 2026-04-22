@@ -42,14 +42,40 @@ import type {
   ProtocolCategory,
 } from "@/types/protocols";
 import { VERSION } from "@/lib/version";
+import type { TabId } from "@/components/layout/TabNav";
+import { ProtocolStepDeepDive } from "@/components/operations/ProtocolStepDeepDive";
 
 type ProtocolSubTab = "library" | "run";
 
 interface ProtocolRunnerProps {
   onQueryTime: (time: number) => void;
   subTab: ProtocolSubTab;
-  onSubTabChange: (sub: ProtocolSubTab) => void;
+  /**
+   * Called for all tab changes, not just the Library/Run sub-tabs.
+   * Receiving any TabId lets the Runner open a step's full operation
+   * view via the deep-link on each result card.
+   */
+  onSubTabChange: (tab: TabId) => void;
 }
+
+/** Tab labels for the "Open in X tab" links on step cards. */
+const OPERATION_LABELS: Partial<Record<TabId, string>> = {
+  distance: "Concept Distance",
+  matrix: "Distance Matrix",
+  negation: "Negation Gauge",
+  battery: "Negation Battery",
+  neighbourhood: "Neighbourhood",
+  sectioning: "Semantic Sectioning",
+  drift: "Vector Drift",
+  walk: "Vector Walk",
+  textvec: "Text Vectorisation",
+  compass: "Hegemony Compass",
+  abstraction: "Real Abstraction",
+  silence: "Silence Detector",
+  agonism: "Agonism Test",
+  analogy: "Vector Logic",
+  topology: "Persistent Homology",
+};
 
 const CATEGORY_LABEL: Record<ProtocolCategory, string> = {
   workshop: "Workshop",
@@ -72,7 +98,9 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<unknown>(null);
   const [run, setRun] = useState<ProtocolRun | null>(null);
-  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  // All step panels are expanded by default after a run; the user can
+  // collapse individual cards to make the run easier to scan.
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
 
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
@@ -110,15 +138,40 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
     setActiveProtocol(protocol);
     setRun(null);
     setRunError(null);
-    setExpandedStep(null);
+    setExpandedSteps(new Set());
     onSubTabChange("run");
+  };
+
+  const toggleStep = (i: number) => {
+    setExpandedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  /**
+   * Hand off to an operation's full tab. Stashes the step's inputs in
+   * sessionStorage under a per-operation key so the operation tab can
+   * pre-fill itself on mount. Tabs that don't yet read the stash will
+   * simply ignore it; no regression.
+   */
+  const handleOpenInOperation = (step: ProtocolStepResult) => {
+    try {
+      const key = `manifold-atlas.prefill.${step.step.operation}`;
+      sessionStorage.setItem(key, JSON.stringify(step.step.inputs));
+    } catch {
+      // sessionStorage can be disabled; the tab switch still works.
+    }
+    onSubTabChange(step.step.operation);
   };
 
   const handleRun = useCallback(async () => {
     if (!activeProtocol) return;
     setRunning(true);
     setRunError(null);
-    setExpandedStep(null);
+    setExpandedSteps(new Set());
     const overallStart = performance.now();
     const startedAt = new Date().toISOString();
 
@@ -180,9 +233,9 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
         atlasVersion: VERSION,
       };
       setRun(newRun);
-      // Expand the first successful step by default
-      const firstDone = stepResults.findIndex(s => s.status === "done");
-      setExpandedStep(firstDone >= 0 ? firstDone : 0);
+      // Expand every step by default so all results are visible; the
+      // user can collapse individual cards to scan a long run.
+      setExpandedSteps(new Set(stepResults.map((_, i) => i)));
       onQueryTime(totalElapsedMs / 1000);
     } catch (err) {
       setRunError(err);
@@ -194,7 +247,7 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
   const handleReset = () => {
     setRun(null);
     setRunError(null);
-    setExpandedStep(null);
+    setExpandedSteps(new Set());
   };
 
   const exportMarkdown = () => {
@@ -461,12 +514,13 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
           </div>
 
           {run.steps.map((s, i) => {
-            const expanded = expandedStep === i;
+            const expanded = expandedSteps.has(i);
             const label = s.step.label || s.step.operation;
+            const opLabel = OPERATION_LABELS[s.step.operation] ?? s.step.operation;
             return (
               <div key={i} className="card-editorial overflow-hidden">
                 <button
-                  onClick={() => setExpandedStep(expanded ? null : i)}
+                  onClick={() => toggleStep(i)}
                   className="w-full px-5 py-3 flex items-center gap-3 hover:bg-cream/50 transition-colors"
                 >
                   {expanded ? (
@@ -494,7 +548,7 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
                 </button>
 
                 {expanded && (
-                  <div className="px-5 pb-5 border-t border-parchment space-y-3">
+                  <div className="px-5 pb-5 border-t border-parchment space-y-4">
                     {s.error && (
                       <p className="pt-3 font-sans text-body-sm text-error-700">
                         {s.error}
@@ -514,12 +568,27 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
                         ))}
                       </div>
                     )}
+
+                    {/* Deep dive: full per-model / per-step tabular data */}
+                    {s.status === "done" && s.details != null && (
+                      <div className="pt-1 border-t border-parchment">
+                        <div className="pt-3 font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                          Deep Dive
+                        </div>
+                        <ProtocolStepDeepDive step={s} />
+                      </div>
+                    )}
+
                     {s.status === "done" && (
                       <div className="pt-1 flex items-center">
-                        <span className="font-sans text-caption text-muted-foreground italic">
-                          Full visualisation available in the{" "}
-                          <span className="font-semibold">{s.step.operation}</span> tab.
-                        </span>
+                        <button
+                          onClick={() => handleOpenInOperation(s)}
+                          className="flex items-center gap-1.5 font-sans text-caption text-burgundy hover:text-burgundy-900 underline underline-offset-2"
+                          title={`Open this step in the ${opLabel} tab with inputs pre-filled`}
+                        >
+                          <ExternalLink size={12} />
+                          Open in {opLabel} tab
+                        </button>
                       </div>
                     )}
                   </div>
@@ -558,5 +627,3 @@ function downloadText(filename: string, body: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-// Suppress unused-icon warning in case ExternalLink gets removed in a future edit.
-void ExternalLink;
