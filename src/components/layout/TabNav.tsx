@@ -73,6 +73,18 @@ function getGroup(tabId: TabId): GroupId {
   return "measure";
 }
 
+/**
+ * Public lookup: given a tab id, return the group's display label
+ * (Measure / Map / Critique / Protocol). Used by the Header's
+ * contextual view indicator.
+ */
+export function getGroupLabel(tabId: TabId): string {
+  for (const group of GROUPS) {
+    if (group.tabs.some(t => t.id === tabId)) return group.label;
+  }
+  return "";
+}
+
 interface TabNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;

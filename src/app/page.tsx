@@ -41,7 +41,7 @@ function AppContent() {
   const [lastQueryTime, setLastQueryTime] = useState<number | undefined>(undefined);
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header activeTab={activeTab} />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="flex-1 px-6 py-6 max-w-6xl mx-auto w-full">
