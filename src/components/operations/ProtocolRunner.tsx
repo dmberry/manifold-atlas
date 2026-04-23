@@ -44,6 +44,8 @@ import type {
 import { VERSION } from "@/lib/version";
 import type { TabId } from "@/components/layout/TabNav";
 import { ProtocolStepDeepDive } from "@/components/operations/ProtocolStepDeepDive";
+import { ProtocolStepEditor } from "@/components/operations/ProtocolStepEditor";
+import type { ProtocolStep } from "@/types/protocols";
 
 type ProtocolSubTab = "library" | "run";
 
@@ -101,6 +103,11 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
   // All step panels are expanded by default after a run; the user can
   // collapse individual cards to make the run easier to scan.
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+  // Per-step input overrides. Keyed by step index. A step is "edited"
+  // iff it has an entry here; entries are merged over the step's
+  // defaults at run time.
+  const [editedInputs, setEditedInputs] = useState<Record<number, Record<string, unknown>>>({});
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
@@ -139,8 +146,37 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
     setRun(null);
     setRunError(null);
     setExpandedSteps(new Set());
+    setEditedInputs({});
+    setEditorOpen(false);
     onSubTabChange("run");
   };
+
+  /**
+   * Apply edits to a protocol, returning a new Protocol whose steps
+   * carry merged inputs. Used before collecting texts and executing.
+   */
+  const applyEdits = (protocol: Protocol): Protocol => ({
+    ...protocol,
+    steps: protocol.steps.map((step, i): ProtocolStep => {
+      const edits = editedInputs[i];
+      if (!edits) return step;
+      return { ...step, inputs: { ...step.inputs, ...edits } };
+    }),
+  });
+
+  const handleStepEdit = (stepIndex: number, patch: Record<string, unknown> | null) => {
+    setEditedInputs(prev => {
+      const next = { ...prev };
+      if (patch === null || Object.keys(patch).length === 0) {
+        delete next[stepIndex];
+      } else {
+        next[stepIndex] = patch;
+      }
+      return next;
+    });
+  };
+
+  const resetAllEdits = () => setEditedInputs({});
 
   const toggleStep = (i: number) => {
     setExpandedSteps(prev => {
@@ -177,7 +213,8 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
 
     try {
       const enabledModels = getEnabledModels();
-      const texts = collectProtocolTexts(activeProtocol);
+      const effective = applyEdits(activeProtocol);
+      const texts = collectProtocolTexts(effective);
 
       // Batched embedding across all steps' inputs, all models
       const modelVectors = await embedAll(texts);
@@ -186,10 +223,11 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
       const textIndex = new Map<string, number>();
       texts.forEach((t, i) => textIndex.set(t, i));
 
-      // Execute each step with the relevant slice of vectors
+      // Execute each step with the relevant slice of vectors. Uses
+      // the effective (edit-merged) steps so user tweaks take effect.
       const stepResults: ProtocolStepResult[] = [];
-      for (let i = 0; i < activeProtocol.steps.length; i++) {
-        const step = activeProtocol.steps[i];
+      for (let i = 0; i < effective.steps.length; i++) {
+        const step = effective.steps[i];
         const stepVectors = vectorsForStep(step, textIndex, modelVectors);
         if (stepVectors === null) {
           stepResults.push({
@@ -216,8 +254,8 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
       const completedAt = new Date().toISOString();
 
       const newRun: ProtocolRun = {
-        protocolId: activeProtocol.id,
-        protocolTitle: activeProtocol.title,
+        protocolId: effective.id,
+        protocolTitle: effective.title,
         startedAt,
         completedAt,
         totalElapsedMs,
@@ -242,12 +280,13 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
     } finally {
       setRunning(false);
     }
-  }, [activeProtocol, embedAll, getEnabledModels, onQueryTime]);
+  }, [activeProtocol, editedInputs, embedAll, getEnabledModels, onQueryTime]);
 
   const handleReset = () => {
     setRun(null);
     setRunError(null);
     setExpandedSteps(new Set());
+    setEditedInputs({});
   };
 
   const exportMarkdown = () => {
@@ -460,13 +499,54 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
             {running ? "Running..." : "Run Protocol"}
           </button>
           <button
+            onClick={() => setEditorOpen(v => !v)}
+            className="btn-editorial-ghost flex items-center gap-1"
+          >
+            {editorOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {editorOpen ? "Hide step inputs" : "Edit step inputs"}
+            {Object.keys(editedInputs).length > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded-sm bg-burgundy/10 text-burgundy text-[10px] font-semibold uppercase tracking-wider">
+                {Object.keys(editedInputs).length} edited
+              </span>
+            )}
+          </button>
+          {Object.keys(editedInputs).length > 0 && (
+            <button
+              onClick={resetAllEdits}
+              className="btn-editorial-ghost text-caption"
+              title="Discard all step edits, restore protocol defaults"
+            >
+              Reset all edits
+            </button>
+          )}
+          <button
             onClick={() => onSubTabChange("library")}
-            className="btn-editorial-ghost"
+            className="btn-editorial-ghost ml-auto"
           >
             Back to Library
           </button>
         </div>
       </div>
+
+      {editorOpen && (
+        <div className="space-y-3">
+          <p className="font-sans text-caption text-muted-foreground">
+            Tweak any step's inputs before running. Substitute your own claims,
+            swap the anchors in a sectioning walk, or change the A − B + C terms.
+            Edits are applied on the next Run and discarded when you leave this
+            protocol.
+          </p>
+          {activeProtocol.steps.map((step, i) => (
+            <ProtocolStepEditor
+              key={i}
+              step={step}
+              stepIndex={i}
+              edits={editedInputs[i]}
+              onChange={patch => handleStepEdit(i, patch)}
+            />
+          ))}
+        </div>
+      )}
 
       {runError != null && <ErrorDisplay error={runError} onRetry={handleRun} />}
 
