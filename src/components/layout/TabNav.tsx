@@ -56,11 +56,11 @@ const GROUPS: TabGroup[] = [
   },
   {
     id: "protocol",
-    label: "Protocol",
+    label: "Library",
     description: "Curated sequences of operations, one-click runnable",
     icon: Workflow,
     tabs: [
-      { id: "library", label: "Library" },
+      { id: "library", label: "Browse" },
       { id: "run", label: "Run" },
     ],
   },
