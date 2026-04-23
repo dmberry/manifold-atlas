@@ -446,32 +446,101 @@ function writeGrammar(doc: jsPDF, cur: Cursor, r: GrammarOfVectorsResult) {
     cur,
     `${r.grammarName} · source: ${r.register ?? "custom"} · ${r.summary.totalPairs} constructions · ` +
       `opposition preserved ${(r.summary.preservedRate * 100).toFixed(1)}% · ` +
-      `avg cosine ${r.summary.avgSimilarity.toFixed(4)} · threshold ${r.threshold}`,
+      `avg cosine ${r.summary.avgSimilarity.toFixed(4)} ± ${r.summary.stdDevSimilarity.toFixed(4)} · threshold ${r.threshold}`,
     { size: 9, colour: MUTED, gapAfter: 6 }
   );
   if (r.summary.mostDeceptive) {
     writeText(
       doc,
       cur,
-      `Most deceptive: "${r.summary.mostDeceptive.raw}" — cos ${r.summary.mostDeceptive.cosine.toFixed(3)} in ${r.summary.mostDeceptive.modelName}.`,
+      `Most deceptive: "${r.summary.mostDeceptive.raw}" - cos ${r.summary.mostDeceptive.cosine.toFixed(3)} in ${r.summary.mostDeceptive.modelName}.`,
+      { size: 9, colour: INK, gapAfter: 3, style: "italic" }
+    );
+  }
+  if (r.summary.mostPreserved) {
+    writeText(
+      doc,
+      cur,
+      `Most preserved: "${r.summary.mostPreserved.raw}" - cos ${r.summary.mostPreserved.cosine.toFixed(3)} in ${r.summary.mostPreserved.modelName}.`,
+      { size: 9, colour: INK, gapAfter: 3, style: "italic" }
+    );
+  }
+  if (r.summary.mostContested) {
+    writeText(
+      doc,
+      cur,
+      `Most contested across models: "${r.summary.mostContested.raw}" - range ${r.summary.mostContested.range.toFixed(3)} (min ${r.summary.mostContested.minCosine.toFixed(3)}, max ${r.summary.mostContested.maxCosine.toFixed(3)}).`,
       { size: 9, colour: INK, gapAfter: 6, style: "italic" }
     );
   }
-  const modelNames = r.pairs[0]?.models.map(m => m.modelName) ?? [];
+
+  // Per-model aggregates
+  writeText(doc, cur, "Per-model aggregates", { size: 9, style: "bold", colour: MUTED, gapAfter: 2 });
   writeTable(
     doc,
     cur,
-    [["Construction (X / Y)", ...modelNames]],
-    r.pairs.map(row => [
-      `${row.instance.raw}\nX: ${row.instance.parts[0]} | Y: ${row.instance.parts[1]}`,
-      ...row.models.map(m => (!m.oppositionPreserved ? `${m.cosineSimilarity.toFixed(3)} *` : m.cosineSimilarity.toFixed(3))),
+    [["Model", "N", "Mean", "Std dev", "Min", "Max", "Preserved"]],
+    r.modelAggregates.map(ma => [
+      ma.modelName,
+      String(ma.pairCount),
+      ma.meanCosine.toFixed(4),
+      ma.stdDevCosine.toFixed(4),
+      ma.minCosine.toFixed(3),
+      ma.maxCosine.toFixed(3),
+      `${ma.preservedCount} / ${ma.pairCount} (${(ma.preservedRate * 100).toFixed(0)}%)`,
     ])
+  );
+
+  // Per-construction matrix
+  writeText(doc, cur, "Per-construction cosines", { size: 9, style: "bold", colour: MUTED, gapAfter: 2 });
+  const modelNames = r.pairs[0]?.models.map(m => m.modelName) ?? [];
+  const hasMultipleModels = modelNames.length > 1;
+  const headerRow = ["Construction (X / Y)", ...modelNames];
+  if (hasMultipleModels) headerRow.push("Range");
+  writeTable(
+    doc,
+    cur,
+    [headerRow],
+    r.pairs.map(row => {
+      const cells = [
+        `${row.instance.raw}\nX: ${row.instance.parts[0]} | Y: ${row.instance.parts[1]}`,
+        ...row.models.map(m => (!m.oppositionPreserved ? `${m.cosineSimilarity.toFixed(3)} *` : m.cosineSimilarity.toFixed(3))),
+      ];
+      if (hasMultipleModels) cells.push(row.crossModelRange.toFixed(3));
+      return cells;
+    })
   );
   writeText(
     doc,
     cur,
-    "Values marked * are at or above the threshold — the rhetoric of opposition exceeds the geometry of opposition.",
-    { size: 8, style: "italic", colour: MUTED }
+    "Values marked * are at or above the threshold - the rhetoric of opposition exceeds the geometry of opposition.",
+    { size: 8, style: "italic", colour: MUTED, gapAfter: 6 }
+  );
+
+  // Threshold sweep
+  writeText(doc, cur, "Threshold sweep", { size: 9, style: "bold", colour: MUTED, gapAfter: 2 });
+  writeTable(
+    doc,
+    cur,
+    [["Threshold", "Preserved", "Rate"]],
+    r.thresholdSweep.map(row => [
+      row.threshold === r.threshold ? `${row.threshold.toFixed(2)} (current)` : row.threshold.toFixed(2),
+      `${row.preservedCount} / ${row.totalTests}`,
+      `${(row.preservedRate * 100).toFixed(1)}%`,
+    ])
+  );
+
+  // Cosine distribution
+  writeText(doc, cur, "Cosine distribution", { size: 9, style: "bold", colour: MUTED, gapAfter: 2 });
+  writeTable(
+    doc,
+    cur,
+    [["Bucket", "Count", "Percent"]],
+    r.cosineDistribution.map(b => [
+      `${b.lower.toFixed(1)} - ${b.upper.toFixed(1)}`,
+      String(b.count),
+      `${r.summary.totalTests > 0 ? ((b.count / r.summary.totalTests) * 100).toFixed(1) : "0.0"}%`,
+    ])
   );
 }
 

@@ -478,8 +478,17 @@ function CompassSnapshot({
 
 function GrammarDeepDive({ result }: { result: GrammarOfVectorsResult }) {
   const modelNames = result.pairs[0]?.models.map(m => m.modelName) ?? [];
+  const maxBucket = Math.max(1, ...result.cosineDistribution.map(b => b.count));
+
+  // Contested constructions top-3 for the Runner card (lighter than standalone).
+  const contested = [...result.pairs]
+    .filter(p => p.models.length > 1)
+    .sort((a, b) => b.crossModelRange - a.crossModelRange)
+    .slice(0, 3);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Top-line summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-caption">
         <div className="bg-muted rounded-sm p-2">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Grammar</div>
@@ -496,59 +505,210 @@ function GrammarDeepDive({ result }: { result: GrammarOfVectorsResult }) {
           </div>
         </div>
         <div className="bg-muted rounded-sm p-2">
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Avg cosine</div>
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Avg cosine ± σ</div>
           <div className="font-sans text-body-sm font-bold tabular-nums">
-            {result.summary.avgSimilarity.toFixed(4)}
+            {result.summary.avgSimilarity.toFixed(4)} ± {result.summary.stdDevSimilarity.toFixed(4)}
           </div>
         </div>
       </div>
 
-      {result.summary.mostDeceptive && (
-        <div className="font-sans text-caption text-muted-foreground italic">
-          Most deceptive construction:{" "}
-          <span className="text-foreground font-medium">
-            &ldquo;{result.summary.mostDeceptive.raw}&rdquo;
-          </span>{" "}
-          &mdash; cos {result.summary.mostDeceptive.cosine.toFixed(3)} in {result.summary.mostDeceptive.modelName}.
+      {/* Extremes line */}
+      {(result.summary.mostDeceptive || result.summary.mostPreserved || result.summary.mostContested) && (
+        <div className="font-sans text-caption text-muted-foreground italic space-y-1">
+          {result.summary.mostDeceptive && (
+            <div>
+              Most deceptive:{" "}
+              <span className="text-foreground font-medium">
+                &ldquo;{result.summary.mostDeceptive.raw}&rdquo;
+              </span>{" "}
+              — cos <span className="text-error-600 font-semibold">{result.summary.mostDeceptive.cosine.toFixed(3)}</span>{" "}
+              in {result.summary.mostDeceptive.modelName}.
+            </div>
+          )}
+          {result.summary.mostPreserved && (
+            <div>
+              Most preserved:{" "}
+              <span className="text-foreground font-medium">
+                &ldquo;{result.summary.mostPreserved.raw}&rdquo;
+              </span>{" "}
+              — cos <span className="text-success-600 font-semibold">{result.summary.mostPreserved.cosine.toFixed(3)}</span>{" "}
+              in {result.summary.mostPreserved.modelName}.
+            </div>
+          )}
+          {result.summary.mostContested && (
+            <div>
+              Most contested across models:{" "}
+              <span className="text-foreground font-medium">
+                &ldquo;{result.summary.mostContested.raw}&rdquo;
+              </span>{" "}
+              — range {result.summary.mostContested.range.toFixed(3)} (min {result.summary.mostContested.minCosine.toFixed(3)}, max {result.summary.mostContested.maxCosine.toFixed(3)}).
+            </div>
+          )}
         </div>
       )}
 
-      <SectionHeading>Per-construction cosines</SectionHeading>
-      <Table>
-        <thead>
-          <tr className="border-b border-parchment">
-            <Th tip="The construction tested. X and Y were extracted from the prose surface; cosine is measured between their embeddings.">Construction</Th>
-            {modelNames.map(n => (
-              <Th
-                key={n}
-                align="right"
-                tip={`Cosine similarity between the X and Y fragments of each construction, as reported by ${n}. Red means the value is at or above the threshold — the rhetoric of opposition exceeds the geometry of opposition. Green means the geometry preserves the antithesis.`}
-              >
-                {n}
-              </Th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-parchment">
-          {result.pairs.map((p, i) => (
-            <tr key={i}>
-              <Td>
-                <div className="font-medium">{p.instance.raw}</div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">
-                  X: &ldquo;{p.instance.parts[0]}&rdquo; &middot; Y: &ldquo;{p.instance.parts[1]}&rdquo;
-                </div>
-              </Td>
-              {p.models.map(m => (
-                <Td key={m.modelId} align="right" mono>
-                  <span className={!m.oppositionPreserved ? "text-error-600 font-semibold" : "text-success-600"}>
-                    {m.cosineSimilarity.toFixed(3)}
-                  </span>
-                </Td>
-              ))}
+      {/* Per-model aggregates */}
+      <div>
+        <SectionHeading>Per-model aggregates</SectionHeading>
+        <Table>
+          <thead>
+            <tr className="border-b border-parchment">
+              <Th>Model</Th>
+              <Th align="right">N</Th>
+              <Th align="right" tip="Mean cosine across this model's per-construction results.">Mean</Th>
+              <Th align="right" tip="Standard deviation of cosines for this model.">Std dev</Th>
+              <Th align="right">Min</Th>
+              <Th align="right">Max</Th>
+              <Th align="right" tip="Proportion of constructions where cosine < threshold (opposition preserved).">Preserved</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody className="divide-y divide-parchment">
+            {result.modelAggregates.map(ma => (
+              <tr key={ma.modelId}>
+                <Td className="font-medium">{ma.modelName}</Td>
+                <Td align="right" mono>{ma.pairCount}</Td>
+                <Td align="right" mono>{ma.meanCosine.toFixed(4)}</Td>
+                <Td align="right" mono>{ma.stdDevCosine.toFixed(4)}</Td>
+                <Td align="right" mono className="text-success-600">{ma.minCosine.toFixed(3)}</Td>
+                <Td align="right" mono className="text-error-600">{ma.maxCosine.toFixed(3)}</Td>
+                <Td align="right" mono>
+                  {ma.preservedCount} / {ma.pairCount} ({(ma.preservedRate * 100).toFixed(0)}%)
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+
+      {/* Per-construction cosines matrix */}
+      <div>
+        <SectionHeading>Per-construction cosines</SectionHeading>
+        <Table>
+          <thead>
+            <tr className="border-b border-parchment">
+              <Th tip="The construction tested. X and Y were extracted from the prose surface; cosine is measured between their embeddings.">Construction</Th>
+              {modelNames.map(n => (
+                <Th
+                  key={n}
+                  align="right"
+                  tip={`Cosine similarity between the X and Y fragments of each construction, as reported by ${n}. Red = at or above threshold (pseudo-dialectic). Green = below threshold (opposition preserved).`}
+                >
+                  {n}
+                </Th>
+              ))}
+              {modelNames.length > 1 && (
+                <Th align="right" tip="Cross-model range — max cosine minus min cosine for this construction.">Range</Th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-parchment">
+            {result.pairs.map((p, i) => (
+              <tr key={i}>
+                <Td>
+                  <div className="font-medium">{p.instance.raw}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    X: &ldquo;{p.instance.parts[0]}&rdquo; &middot; Y: &ldquo;{p.instance.parts[1]}&rdquo;
+                  </div>
+                </Td>
+                {p.models.map(m => (
+                  <Td key={m.modelId} align="right" mono>
+                    <span className={!m.oppositionPreserved ? "text-error-600 font-semibold" : "text-success-600"}>
+                      {m.cosineSimilarity.toFixed(3)}
+                    </span>
+                  </Td>
+                ))}
+                {modelNames.length > 1 && (
+                  <Td align="right" mono className="text-muted-foreground">
+                    {p.crossModelRange.toFixed(3)}
+                  </Td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+
+      {/* Threshold sweep */}
+      <div>
+        <SectionHeading>Threshold sweep</SectionHeading>
+        <Table>
+          <thead>
+            <tr className="border-b border-parchment">
+              <Th>Threshold</Th>
+              <Th align="right">Preserved</Th>
+              <Th align="right">Rate</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-parchment">
+            {result.thresholdSweep.map(row => {
+              const isCurrent = row.threshold === result.threshold;
+              return (
+                <tr key={row.threshold} className={isCurrent ? "bg-burgundy/5" : ""}>
+                  <Td mono>
+                    {row.threshold.toFixed(2)}
+                    {isCurrent && <span className="ml-2 text-burgundy text-[9px] font-semibold uppercase tracking-wider">current</span>}
+                  </Td>
+                  <Td align="right" mono>{row.preservedCount} / {row.totalTests}</Td>
+                  <Td align="right" mono>{(row.preservedRate * 100).toFixed(1)}%</Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      </div>
+
+      {/* Cosine distribution */}
+      <div>
+        <SectionHeading>Cosine distribution across all tests</SectionHeading>
+        <div className="space-y-1">
+          {result.cosineDistribution.map((b, i) => {
+            const pct = result.summary.totalTests > 0 ? (b.count / result.summary.totalTests) * 100 : 0;
+            const aboveThreshold = b.lower >= result.threshold;
+            const barWidth = (b.count / maxBucket) * 100;
+            return (
+              <div key={i} className="flex items-center gap-2 font-sans text-caption">
+                <span className="w-20 text-muted-foreground tabular-nums text-right">
+                  {b.lower.toFixed(1)}–{b.upper.toFixed(1)}
+                </span>
+                <div className="flex-1 h-3 bg-muted rounded-sm overflow-hidden">
+                  <div
+                    className={`h-full rounded-sm ${aboveThreshold ? "bg-error-500" : "bg-success-500"}`}
+                    style={{ width: `${barWidth}%` }}
+                  />
+                </div>
+                <span className="w-20 text-right tabular-nums text-muted-foreground">
+                  {b.count} ({pct.toFixed(1)}%)
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Most contested */}
+      {contested.length > 0 && (
+        <div>
+          <SectionHeading>Most contested constructions across models</SectionHeading>
+          <Table>
+            <thead>
+              <tr className="border-b border-parchment">
+                <Th>Construction</Th>
+                <Th align="right">Range</Th>
+                <Th align="right">Mean</Th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-parchment">
+              {contested.map((p, i) => (
+                <tr key={i}>
+                  <Td>{p.instance.raw}</Td>
+                  <Td align="right" mono>{p.crossModelRange.toFixed(4)}</Td>
+                  <Td align="right" mono>{p.meanCosine.toFixed(4)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      )}
 
       <p className="font-sans text-caption text-muted-foreground italic">
         Values above the threshold ({result.threshold}) count as pseudo-dialectic:

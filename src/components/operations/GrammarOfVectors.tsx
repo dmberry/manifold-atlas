@@ -32,6 +32,7 @@ import {
   parseInstances,
   type GrammarInstance,
   type GrammarOfVectorsResult,
+  type GrammarPairResult,
 } from "@/lib/operations/grammar-of-vectors";
 
 interface GrammarOfVectorsProps {
@@ -52,6 +53,17 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [result, setResult] = useState<GrammarOfVectorsResult | null>(null);
+  const [expandedPairs, setExpandedPairs] = useState<Set<number>>(new Set());
+  const [deepDiveOpen, setDeepDiveOpen] = useState(false);
+
+  const togglePair = (i: number) => {
+    setExpandedPairs(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
 
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
@@ -137,13 +149,17 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
 
   const exportCsv = () => {
     if (!result) return;
-    const rows = ["construction,x,y,model,cosine,opposition_preserved"];
+    const rows = [
+      "construction,x,y,model,cosine,cosine_distance,angular_degrees,euclidean,norm_x,norm_y,dimensions,opposition_preserved",
+    ];
     for (const p of result.pairs) {
       for (const m of p.models) {
         const raw = p.instance.raw.replace(/"/g, '""');
         const x = p.instance.parts[0].replace(/"/g, '""');
         const y = p.instance.parts[1].replace(/"/g, '""');
-        rows.push(`"${raw}","${x}","${y}","${m.modelName}",${m.cosineSimilarity.toFixed(6)},${m.oppositionPreserved}`);
+        rows.push(
+          `"${raw}","${x}","${y}","${m.modelName}",${m.cosineSimilarity.toFixed(6)},${m.cosineDistance.toFixed(6)},${m.angularDistance.toFixed(4)},${m.euclideanDistance.toFixed(6)},${m.normX.toFixed(4)},${m.normY.toFixed(4)},${m.dimensions},${m.oppositionPreserved}`
+        );
       }
     }
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
@@ -337,7 +353,7 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
             </p>
           </div>
 
-          {/* Per-construction × per-model matrix */}
+          {/* Per-construction × per-model matrix with expandable rows */}
           <div className="card-editorial overflow-hidden">
             <div className="px-5 pt-5 pb-3 flex items-center justify-between">
               <h3 className="font-display text-body-lg font-bold">Per-construction cosines</h3>
@@ -350,7 +366,8 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
               <table className="w-full font-sans text-body-sm">
                 <thead>
                   <tr className="border-b border-parchment">
-                    <th className="text-left px-5 py-2 text-caption text-muted-foreground uppercase tracking-wider font-semibold">
+                    <th className="w-6"></th>
+                    <th className="text-left px-3 py-2 text-caption text-muted-foreground uppercase tracking-wider font-semibold">
                       Construction
                     </th>
                     {result.pairs[0]?.models.map(m => (
@@ -358,36 +375,393 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
                         {m.modelName}
                       </th>
                     ))}
+                    <th
+                      className="text-right px-3 py-2 text-caption text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="Cross-model range — max cosine minus min cosine. High values mean models disagree about whether the antithesis survives."
+                    >
+                      Range
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-parchment">
-                  {result.pairs.map((p, i) => (
-                    <tr key={i} className="hover:bg-cream/30 transition-colors">
-                      <td className="px-5 py-2.5 max-w-[360px]">
-                        <div className="font-medium">{p.instance.raw}</div>
-                        <div className="text-caption text-muted-foreground mt-0.5">
-                          X: &ldquo;{p.instance.parts[0]}&rdquo; · Y: &ldquo;{p.instance.parts[1]}&rdquo;
-                        </div>
+                  {result.pairs.map((p, i) => {
+                    const expanded = expandedPairs.has(i);
+                    return (
+                      <ExpandableRow
+                        key={i}
+                        pair={p}
+                        expanded={expanded}
+                        onToggle={() => togglePair(i)}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 py-2 font-sans text-caption text-muted-foreground italic">
+              Click any row to expand its per-model geometry (cosine distance, angular distance, Euclidean distance, vector norms, dimensions).
+            </div>
+          </div>
+
+          {/* Deep Dive */}
+          <div className="card-editorial overflow-hidden">
+            <button
+              onClick={() => setDeepDiveOpen(!deepDiveOpen)}
+              className="w-full px-5 py-3 flex items-center gap-2 hover:bg-cream/50 transition-colors"
+            >
+              {deepDiveOpen ? (
+                <ChevronDown size={14} className="text-burgundy" />
+              ) : (
+                <ChevronRight size={14} className="text-muted-foreground" />
+              )}
+              <span className="font-display text-body-lg font-bold">Deep Dive</span>
+              <span className="ml-2 font-sans text-caption text-muted-foreground">
+                per-model aggregates · threshold sweep · distribution · contested constructions · extremes
+              </span>
+            </button>
+            {deepDiveOpen && <DeepDive result={result} />}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ExpandableRow({
+  pair,
+  expanded,
+  onToggle,
+}: {
+  pair: GrammarPairResult;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const modelCount = pair.models.length;
+  return (
+    <>
+      <tr className="hover:bg-cream/30 transition-colors cursor-pointer" onClick={onToggle}>
+        <td className="px-2 py-2.5 text-center">
+          {expanded ? (
+            <ChevronDown size={12} className="text-muted-foreground inline" />
+          ) : (
+            <ChevronRight size={12} className="text-muted-foreground inline" />
+          )}
+        </td>
+        <td className="px-3 py-2.5 max-w-[360px]">
+          <div className="font-medium">{pair.instance.raw}</div>
+          <div className="text-caption text-muted-foreground mt-0.5">
+            X: &ldquo;{pair.instance.parts[0]}&rdquo; · Y: &ldquo;{pair.instance.parts[1]}&rdquo;
+          </div>
+        </td>
+        {pair.models.map(m => (
+          <td key={m.modelId} className="text-right px-3 py-2.5">
+            <span
+              className={`font-bold tabular-nums ${
+                !m.oppositionPreserved ? "text-error-600" : "text-success-600"
+              }`}
+            >
+              {m.cosineSimilarity.toFixed(3)}
+            </span>
+          </td>
+        ))}
+        <td className="text-right px-3 py-2.5 tabular-nums text-muted-foreground">
+          {modelCount > 1 ? pair.crossModelRange.toFixed(3) : "—"}
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="bg-cream/20">
+          <td></td>
+          <td colSpan={modelCount + 2} className="px-3 py-3">
+            <div className="overflow-x-auto">
+              <table className="w-full font-sans text-caption">
+                <thead>
+                  <tr className="border-b border-parchment">
+                    <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Model</th>
+                    <th
+                      className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="Cosine similarity between X and Y. 1.0 = identical direction; 0.0 = orthogonal."
+                    >
+                      Cosine
+                    </th>
+                    <th
+                      className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="1 − cosine similarity."
+                    >
+                      Distance
+                    </th>
+                    <th
+                      className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="Angular distance in degrees. 0° = identical, 90° = orthogonal, 180° = opposite. The construction claims 180°. The geometry usually delivers a few degrees."
+                    >
+                      Angular (°)
+                    </th>
+                    <th
+                      className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="L2 norm of (x − y). Depends on magnitude as well as direction."
+                    >
+                      Euclidean
+                    </th>
+                    <th
+                      className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="L2 norm of the X vector."
+                    >
+                      ‖X‖
+                    </th>
+                    <th
+                      className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                      title="L2 norm of the Y vector."
+                    >
+                      ‖Y‖
+                    </th>
+                    <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Dims</th>
+                    <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Verdict</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-parchment">
+                  {pair.models.map(m => (
+                    <tr key={m.modelId}>
+                      <td className="px-2 py-1">{m.modelName}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.cosineSimilarity.toFixed(4)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.cosineDistance.toFixed(4)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.angularDistance.toFixed(1)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.euclideanDistance.toFixed(4)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.normX.toFixed(3)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.normY.toFixed(3)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{m.dimensions}</td>
+                      <td className="px-2 py-1 text-right">
+                        {m.oppositionPreserved ? (
+                          <span className="text-success-600 font-semibold">preserved</span>
+                        ) : (
+                          <span className="text-error-600 font-semibold">pseudo-dialectic</span>
+                        )}
                       </td>
-                      {p.models.map(m => (
-                        <td key={m.modelId} className="text-right px-3 py-2.5">
-                          <span
-                            className={`font-bold tabular-nums ${
-                              !m.oppositionPreserved ? "text-error-600" : "text-success-600"
-                            }`}
-                          >
-                            {m.cosineSimilarity.toFixed(3)}
-                          </span>
-                        </td>
-                      ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        </>
+          </td>
+        </tr>
       )}
+    </>
+  );
+}
+
+function DeepDive({ result }: { result: GrammarOfVectorsResult }) {
+  const { modelAggregates, thresholdSweep, cosineDistribution, summary, pairs } = result;
+  const maxBucketCount = Math.max(1, ...cosineDistribution.map(b => b.count));
+
+  // Contested constructions: top-5 by cross-model range.
+  const contested = [...pairs]
+    .filter(p => p.models.length > 1)
+    .sort((a, b) => b.crossModelRange - a.crossModelRange)
+    .slice(0, 5);
+
+  // Extremes: top-10 most deceptive / preserved by pair mean cosine.
+  const byMean = [...pairs].sort((a, b) => b.meanCosine - a.meanCosine);
+  const topDeceptive = byMean.slice(0, Math.min(10, byMean.length));
+  const topPreserved = byMean.slice(-Math.min(10, byMean.length)).reverse();
+
+  return (
+    <div className="px-5 pb-5 pt-1 border-t border-parchment space-y-6">
+      {/* Per-model aggregates */}
+      <section>
+        <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+          Per-model aggregates
+        </h4>
+        <div className="overflow-x-auto">
+          <table className="w-full font-sans text-caption">
+            <thead>
+              <tr className="border-b border-parchment">
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Model</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">N</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Mean</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Std dev</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Min</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Max</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Preserved</th>
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Most deceptive</th>
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Most preserved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-parchment">
+              {modelAggregates.map(ma => (
+                <tr key={ma.modelId}>
+                  <td className="px-2 py-1 font-medium">{ma.modelName}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{ma.pairCount}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{ma.meanCosine.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{ma.stdDevCosine.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums text-success-600">{ma.minCosine.toFixed(3)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums text-error-600">{ma.maxCosine.toFixed(3)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">
+                    {ma.preservedCount} / {ma.pairCount} ({(ma.preservedRate * 100).toFixed(0)}%)
+                  </td>
+                  <td className="px-2 py-1 text-muted-foreground">
+                    {ma.mostDeceptive ? (
+                      <>
+                        <span className="text-error-600 tabular-nums mr-1">{ma.mostDeceptive.cosine.toFixed(3)}</span>
+                        <span title={ma.mostDeceptive.raw}>{truncate(ma.mostDeceptive.raw, 42)}</span>
+                      </>
+                    ) : "—"}
+                  </td>
+                  <td className="px-2 py-1 text-muted-foreground">
+                    {ma.mostPreserved ? (
+                      <>
+                        <span className="text-success-600 tabular-nums mr-1">{ma.mostPreserved.cosine.toFixed(3)}</span>
+                        <span title={ma.mostPreserved.raw}>{truncate(ma.mostPreserved.raw, 42)}</span>
+                      </>
+                    ) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Threshold sweep */}
+      <section>
+        <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+          Threshold sweep
+        </h4>
+        <p className="font-sans text-caption text-muted-foreground italic mb-2">
+          Preservation rate at varying thresholds. The conclusion is sensitive to the threshold choice only at the tails — typically stable across the 0.5–0.7 range. Values are across all tests (N = {summary.totalTests}).
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full font-sans text-caption">
+            <thead>
+              <tr className="border-b border-parchment">
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Threshold</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Preserved</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Rate</th>
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Distribution</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-parchment">
+              {thresholdSweep.map(row => {
+                const rateBar = Math.max(2, row.preservedRate * 200);
+                const isCurrent = row.threshold === result.threshold;
+                return (
+                  <tr key={row.threshold} className={isCurrent ? "bg-burgundy/5" : ""}>
+                    <td className="px-2 py-1 tabular-nums">
+                      {row.threshold.toFixed(2)}
+                      {isCurrent && <span className="ml-2 text-burgundy text-[9px] font-semibold uppercase tracking-wider">current</span>}
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums">{row.preservedCount} / {row.totalTests}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{(row.preservedRate * 100).toFixed(1)}%</td>
+                    <td className="px-2 py-1">
+                      <div className="inline-block h-2 bg-success-500 rounded-sm align-middle" style={{ width: `${rateBar}px` }} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Cosine distribution */}
+      <section>
+        <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+          Cosine distribution
+        </h4>
+        <p className="font-sans text-caption text-muted-foreground italic mb-2">
+          All {summary.totalTests} cosine values across every construction × every model, bucketed in 0.1-wide bins. Clustering above the threshold is the signature of pseudo-dialectic: the rhetoric claims opposition the geometry doesn&rsquo;t deliver.
+        </p>
+        <div className="space-y-1">
+          {cosineDistribution.map((b, i) => {
+            const pct = summary.totalTests > 0 ? (b.count / summary.totalTests) * 100 : 0;
+            const aboveThreshold = b.lower >= result.threshold;
+            const barWidth = (b.count / maxBucketCount) * 100;
+            return (
+              <div key={i} className="flex items-center gap-2 font-sans text-caption">
+                <span className="w-20 text-muted-foreground tabular-nums text-right">
+                  {b.lower.toFixed(1)}–{b.upper.toFixed(1)}
+                </span>
+                <div className="flex-1 h-4 bg-muted rounded-sm overflow-hidden relative">
+                  <div
+                    className={`h-full rounded-sm ${aboveThreshold ? "bg-error-500" : "bg-success-500"}`}
+                    style={{ width: `${barWidth}%` }}
+                  />
+                </div>
+                <span className="w-20 text-right tabular-nums text-muted-foreground">
+                  {b.count} ({pct.toFixed(1)}%)
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Contested constructions */}
+      {contested.length > 0 && (
+        <section>
+          <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+            Most contested constructions
+          </h4>
+          <p className="font-sans text-caption text-muted-foreground italic mb-2">
+            Top {contested.length} constructions by cross-model range — points where the models most disagree about whether the antithesis survives.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full font-sans text-caption">
+              <thead>
+                <tr className="border-b border-parchment">
+                  <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Construction</th>
+                  <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Range</th>
+                  <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Mean</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-parchment">
+                {contested.map((p, i) => (
+                  <tr key={i}>
+                    <td className="px-2 py-1">{p.instance.raw}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{p.crossModelRange.toFixed(4)}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{p.meanCosine.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Extremes */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+            Most deceptive ({topDeceptive.length})
+          </h4>
+          <table className="w-full font-sans text-caption">
+            <tbody className="divide-y divide-parchment">
+              {topDeceptive.map((p, i) => (
+                <tr key={i}>
+                  <td className="px-2 py-1">{p.instance.raw}</td>
+                  <td className="px-2 py-1 text-right tabular-nums text-error-600 font-semibold">
+                    {p.meanCosine.toFixed(3)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+            Most preserved ({topPreserved.length})
+          </h4>
+          <table className="w-full font-sans text-caption">
+            <tbody className="divide-y divide-parchment">
+              {topPreserved.map((p, i) => (
+                <tr key={i}>
+                  <td className="px-2 py-1">{p.instance.raw}</td>
+                  <td className="px-2 py-1 text-right tabular-nums text-success-600 font-semibold">
+                    {p.meanCosine.toFixed(3)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

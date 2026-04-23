@@ -25,6 +25,38 @@
 import { cosineSimilarity } from "@/lib/geometry/cosine";
 import { EMBEDDING_MODELS } from "@/types/embeddings";
 
+// Geometric helpers kept local so the module has no React deps.
+
+function vectorNorm(v: number[]): number {
+  let s = 0;
+  for (const x of v) s += x * x;
+  return Math.sqrt(s);
+}
+
+function euclidean(a: number[], b: number[]): number {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) {
+    const d = a[i] - b[i];
+    s += d * d;
+  }
+  return Math.sqrt(s);
+}
+
+function mean(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  let s = 0;
+  for (const x of xs) s += x;
+  return s / xs.length;
+}
+
+function stdDev(xs: number[]): number {
+  if (xs.length < 2) return 0;
+  const m = mean(xs);
+  let s = 0;
+  for (const x of xs) s += (x - m) ** 2;
+  return Math.sqrt(s / xs.length);
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -76,6 +108,18 @@ export interface GrammarPairModelResult {
   modelId: string;
   modelName: string;
   cosineSimilarity: number;
+  /** 1 − cosine similarity. */
+  cosineDistance: number;
+  /** Angular distance in degrees (0° = identical, 90° = orthogonal, 180° = opposite). */
+  angularDistance: number;
+  /** L2 norm of (x − y). */
+  euclideanDistance: number;
+  /** L2 norm of the X vector. */
+  normX: number;
+  /** L2 norm of the Y vector. */
+  normY: number;
+  /** Embedding dimensions this model uses. */
+  dimensions: number;
   /** True if cosine < threshold — opposition is preserved. */
   oppositionPreserved: boolean;
 }
@@ -83,6 +127,44 @@ export interface GrammarPairModelResult {
 export interface GrammarPairResult {
   instance: GrammarInstance;
   models: GrammarPairModelResult[];
+  /** Mean cosine across models for this pair. */
+  meanCosine: number;
+  /**
+   * Cross-model range (max cosine − min cosine) for this construction.
+   * High range = models disagree about whether the antithesis survives.
+   */
+  crossModelRange: number;
+}
+
+export interface GrammarModelAggregate {
+  modelId: string;
+  modelName: string;
+  pairCount: number;
+  meanCosine: number;
+  stdDevCosine: number;
+  minCosine: number;
+  maxCosine: number;
+  preservedCount: number;
+  preservedRate: number;
+  /** Construction this model rates as most geometrically deceptive. */
+  mostDeceptive: { raw: string; cosine: number } | null;
+  /** Construction this model rates as most-preserved antithesis. */
+  mostPreserved: { raw: string; cosine: number } | null;
+}
+
+export interface GrammarThresholdSweepRow {
+  threshold: number;
+  preservedCount: number;
+  totalTests: number;
+  preservedRate: number;
+}
+
+export interface GrammarDistributionBucket {
+  /** Lower bound of the bucket, inclusive. */
+  lower: number;
+  /** Upper bound of the bucket, exclusive (except the last bucket). */
+  upper: number;
+  count: number;
 }
 
 export interface GrammarOfVectorsResult {
@@ -91,17 +173,39 @@ export interface GrammarOfVectorsResult {
   register?: string;
   threshold: number;
   pairs: GrammarPairResult[];
+  modelAggregates: GrammarModelAggregate[];
+  thresholdSweep: GrammarThresholdSweepRow[];
+  /** Ten 0.1-wide buckets over all cosine values across all models. */
+  cosineDistribution: GrammarDistributionBucket[];
   summary: {
     totalPairs: number;
     totalTests: number;
     preservedCount: number;
     preservedRate: number;
     avgSimilarity: number;
+    /** Standard deviation of cosine values across all tests. */
+    stdDevSimilarity: number;
     /** The pair with the highest (most geometrically deceptive) cosine. */
     mostDeceptive: {
       raw: string;
       cosine: number;
       modelName: string;
+    } | null;
+    /** The pair with the lowest (most-preserved) cosine. */
+    mostPreserved: {
+      raw: string;
+      cosine: number;
+      modelName: string;
+    } | null;
+    /**
+     * Construction with the widest cross-model range — the point where
+     * models disagree most about whether opposition is preserved.
+     */
+    mostContested: {
+      raw: string;
+      range: number;
+      minCosine: number;
+      maxCosine: number;
     } | null;
   };
 }
@@ -393,38 +497,120 @@ export function computeGrammarOfVectors(
         const xVec = vectors[i * 2];
         const yVec = vectors[i * 2 + 1];
         const sim = cosineSimilarity(xVec, yVec);
+        const clamped = Math.max(-1, Math.min(1, sim));
+        const angular = (Math.acos(clamped) * 180) / Math.PI;
         const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
         return {
           modelId: m.id,
           modelName: spec?.name || m.name || m.id,
           cosineSimilarity: sim,
+          cosineDistance: 1 - sim,
+          angularDistance: angular,
+          euclideanDistance: euclidean(xVec, yVec),
+          normX: vectorNorm(xVec),
+          normY: vectorNorm(yVec),
+          dimensions: xVec.length,
           oppositionPreserved: sim < threshold,
         };
       });
-    return { instance, models };
+
+    const sims = models.map(m => m.cosineSimilarity);
+    const meanCosine = mean(sims);
+    const crossModelRange = sims.length > 1 ? Math.max(...sims) - Math.min(...sims) : 0;
+    return { instance, models, meanCosine, crossModelRange };
   });
 
-  // Summary stats.
+  // Summary stats + most-deceptive / most-preserved / most-contested.
   let totalTests = 0;
   let preservedCount = 0;
-  let simSum = 0;
+  const allCosines: number[] = [];
   let mostDeceptive: GrammarOfVectorsResult["summary"]["mostDeceptive"] = null;
+  let mostPreserved: GrammarOfVectorsResult["summary"]["mostPreserved"] = null;
+  let mostContested: GrammarOfVectorsResult["summary"]["mostContested"] = null;
   for (const row of pairs) {
     for (const m of row.models) {
       totalTests += 1;
       if (m.oppositionPreserved) preservedCount += 1;
-      simSum += m.cosineSimilarity;
+      allCosines.push(m.cosineSimilarity);
       if (!mostDeceptive || m.cosineSimilarity > mostDeceptive.cosine) {
-        mostDeceptive = {
+        mostDeceptive = { raw: row.instance.raw, cosine: m.cosineSimilarity, modelName: m.modelName };
+      }
+      if (!mostPreserved || m.cosineSimilarity < mostPreserved.cosine) {
+        mostPreserved = { raw: row.instance.raw, cosine: m.cosineSimilarity, modelName: m.modelName };
+      }
+    }
+    if (row.models.length > 1) {
+      if (!mostContested || row.crossModelRange > mostContested.range) {
+        const sims = row.models.map(m => m.cosineSimilarity);
+        mostContested = {
           raw: row.instance.raw,
-          cosine: m.cosineSimilarity,
-          modelName: m.modelName,
+          range: row.crossModelRange,
+          minCosine: Math.min(...sims),
+          maxCosine: Math.max(...sims),
         };
       }
     }
   }
   const preservedRate = totalTests > 0 ? preservedCount / totalTests : 0;
-  const avgSimilarity = totalTests > 0 ? simSum / totalTests : 0;
+  const avgSimilarity = mean(allCosines);
+  const stdDevSimilarity = stdDev(allCosines);
+
+  // Per-model aggregates.
+  const modelAggregates: GrammarModelAggregate[] = [];
+  const modelSet = new Set<string>();
+  for (const row of pairs) for (const m of row.models) modelSet.add(m.modelId);
+  for (const modelId of modelSet) {
+    const rows = pairs
+      .map(p => {
+        const mm = p.models.find(m => m.modelId === modelId);
+        return mm ? { raw: p.instance.raw, cos: mm.cosineSimilarity, preserved: mm.oppositionPreserved, name: mm.modelName } : null;
+      })
+      .filter((x): x is { raw: string; cos: number; preserved: boolean; name: string } => x !== null);
+    if (rows.length === 0) continue;
+    const cosines = rows.map(r => r.cos);
+    const preservedRows = rows.filter(r => r.preserved);
+    const mostDec = rows.reduce((a, b) => (b.cos > a.cos ? b : a));
+    const mostPres = rows.reduce((a, b) => (b.cos < a.cos ? b : a));
+    modelAggregates.push({
+      modelId,
+      modelName: rows[0].name,
+      pairCount: rows.length,
+      meanCosine: mean(cosines),
+      stdDevCosine: stdDev(cosines),
+      minCosine: Math.min(...cosines),
+      maxCosine: Math.max(...cosines),
+      preservedCount: preservedRows.length,
+      preservedRate: rows.length > 0 ? preservedRows.length / rows.length : 0,
+      mostDeceptive: { raw: mostDec.raw, cosine: mostDec.cos },
+      mostPreserved: { raw: mostPres.raw, cosine: mostPres.cos },
+    });
+  }
+
+  // Threshold sweep: how does preservation rate change with threshold?
+  const sweepThresholds = [0.3, 0.4, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9];
+  const thresholdSweep: GrammarThresholdSweepRow[] = sweepThresholds.map(t => {
+    const preserved = allCosines.filter(c => c < t).length;
+    return {
+      threshold: t,
+      preservedCount: preserved,
+      totalTests,
+      preservedRate: totalTests > 0 ? preserved / totalTests : 0,
+    };
+  });
+
+  // Cosine distribution: 10 buckets over [0, 1]. Values <0 bin into
+  // the first bucket; values >=1 bin into the last.
+  const cosineDistribution: GrammarDistributionBucket[] = Array.from({ length: 10 }, (_, i) => ({
+    lower: i / 10,
+    upper: (i + 1) / 10,
+    count: 0,
+  }));
+  for (const c of allCosines) {
+    let idx = Math.floor(c * 10);
+    if (idx < 0) idx = 0;
+    if (idx > 9) idx = 9;
+    cosineDistribution[idx].count += 1;
+  }
 
   return {
     grammarId: grammar.id,
@@ -432,13 +618,19 @@ export function computeGrammarOfVectors(
     register,
     threshold,
     pairs,
+    modelAggregates,
+    thresholdSweep,
+    cosineDistribution,
     summary: {
       totalPairs: pairs.length,
       totalTests,
       preservedCount,
       preservedRate,
       avgSimilarity,
+      stdDevSimilarity,
       mostDeceptive,
+      mostPreserved,
+      mostContested,
     },
   };
 }
