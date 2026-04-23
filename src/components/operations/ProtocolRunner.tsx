@@ -27,6 +27,7 @@ import {
   MinusCircle,
   Workflow,
   BookOpen,
+  Plus,
 } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
@@ -35,6 +36,12 @@ import { ResetButton } from "@/components/shared/ResetButton";
 import { loadAllProtocols } from "@/lib/protocols/parser";
 import { collectProtocolTexts, vectorsForStep } from "@/lib/protocols/inputs";
 import { executeStep } from "@/lib/protocols/execute";
+import {
+  loadCustomProtocols,
+  removeCustomProtocol,
+  type CustomProtocol,
+} from "@/lib/protocols/custom";
+import { AddProtocolModal } from "@/components/operations/AddProtocolModal";
 import type {
   Protocol,
   ProtocolRun,
@@ -95,6 +102,7 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   const [activeProtocol, setActiveProtocol] = useState<Protocol | null>(null);
   const [running, setRunning] = useState(false);
@@ -112,13 +120,15 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
   const { getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
 
-  // Load library on mount
+  // Load library on mount: built-in protocols merged with user-added
+  // ones stored in localStorage.
   useEffect(() => {
     let cancelled = false;
     loadAllProtocols()
       .then(list => {
         if (cancelled) return;
-        setProtocols(list);
+        const custom = loadCustomProtocols();
+        setProtocols([...list, ...custom]);
         setLoadingLibrary(false);
       })
       .catch((err: unknown) => {
@@ -130,6 +140,21 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
       cancelled = true;
     };
   }, []);
+
+  const handleCustomAdded = (protocol: CustomProtocol) => {
+    setProtocols(prev => [...prev, protocol]);
+  };
+
+  const handleRemoveCustom = (id: string) => {
+    if (!confirm(`Remove the custom protocol "${id}" from the Library? Built-in protocols are not affected.`)) return;
+    removeCustomProtocol(id);
+    setProtocols(prev => prev.filter(p => p.id !== id));
+    if (activeProtocol?.id === id) {
+      setActiveProtocol(null);
+      setRun(null);
+      onSubTabChange("library");
+    }
+  };
 
   const grouped = useMemo(() => {
     const g: Record<ProtocolCategory, Protocol[]> = {
@@ -361,16 +386,32 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
     return (
       <div className="space-y-6">
         <div className="card-editorial p-6">
-          <div className="flex items-start justify-between mb-1">
+          <div className="flex items-start justify-between mb-1 gap-4">
             <h2 className="font-display text-display-md font-bold">Library</h2>
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="btn-editorial-secondary flex items-center gap-1"
+            >
+              <Plus size={14} />
+              Add protocol
+            </button>
           </div>
           <p className="font-sans text-body-sm text-slate">
             Curated sequences of operations, ready to run in one click. Each
             protocol tests a specific claim from the vector theory framework
             and produces an exportable report. Designed for workshops and
-            research reproducibility.
+            research reproducibility. Add your own markdown-defined tests via
+            the button above — they persist in this browser and appear
+            alongside the built-in protocols.
           </p>
         </div>
+
+        <AddProtocolModal
+          open={addModalOpen}
+          onClose={() => setAddModalOpen(false)}
+          existingIds={protocols.map(p => p.id)}
+          onAdded={handleCustomAdded}
+        />
 
         {loadingLibrary && (
           <div className="card-editorial p-6 flex items-center gap-2 text-muted-foreground">
@@ -397,49 +438,68 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
                 <h3 className="font-display text-body-lg font-bold text-slate uppercase tracking-wider">
                   {CATEGORY_LABEL[cat]}
                 </h3>
-                {list.map(p => (
-                  <div key={p.id} className="card-editorial p-5">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-display text-body-lg font-bold">{p.title}</h4>
-                          <span
-                            className={`font-sans text-caption uppercase tracking-wider px-2 py-0.5 rounded-sm ${CATEGORY_COLOUR[p.category]}`}
-                          >
-                            {CATEGORY_LABEL[p.category]}
-                          </span>
-                        </div>
-                        <p className="font-sans text-body-sm text-slate">
-                          {p.description}
-                        </p>
-                        <div className="mt-2 flex items-center gap-4 font-sans text-caption text-muted-foreground">
-                          <span>{p.steps.length} steps</span>
-                          {p.estimatedQueries !== undefined && (
-                            <span>~{p.estimatedQueries} embeddings</span>
-                          )}
-                          {p.readingLink && (
-                            <a
-                              href={p.readingLink.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-burgundy hover:text-burgundy-900 underline underline-offset-2"
+                {list.map(p => {
+                  const isCustom = (p as CustomProtocol).isCustom === true;
+                  return (
+                    <div key={p.id} className="card-editorial p-5">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h4 className="font-display text-body-lg font-bold">{p.title}</h4>
+                            <span
+                              className={`font-sans text-caption uppercase tracking-wider px-2 py-0.5 rounded-sm ${CATEGORY_COLOUR[p.category]}`}
                             >
-                              <BookOpen size={11} />
-                              {p.readingLink.label}
-                            </a>
+                              {CATEGORY_LABEL[p.category]}
+                            </span>
+                            {isCustom && (
+                              <span className="font-sans text-caption uppercase tracking-wider px-2 py-0.5 rounded-sm bg-burgundy/10 text-burgundy">
+                                Custom
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-sans text-body-sm text-slate">
+                            {p.description}
+                          </p>
+                          <div className="mt-2 flex items-center gap-4 font-sans text-caption text-muted-foreground">
+                            <span>{p.steps.length} steps</span>
+                            {p.estimatedQueries !== undefined && (
+                              <span>~{p.estimatedQueries} embeddings</span>
+                            )}
+                            {p.readingLink && (
+                              <a
+                                href={p.readingLink.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-burgundy hover:text-burgundy-900 underline underline-offset-2"
+                              >
+                                <BookOpen size={11} />
+                                {p.readingLink.label}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center gap-2">
+                          {isCustom && (
+                            <button
+                              onClick={() => handleRemoveCustom(p.id)}
+                              className="btn-editorial-ghost text-caption"
+                              title="Remove this custom protocol from the Library"
+                            >
+                              Remove
+                            </button>
                           )}
+                          <button
+                            onClick={() => handleSelectProtocol(p)}
+                            className="btn-editorial-primary flex items-center gap-1"
+                          >
+                            <Play size={14} />
+                            Open
+                          </button>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleSelectProtocol(p)}
-                        className="btn-editorial-primary flex-shrink-0 flex items-center gap-1"
-                      >
-                        <Play size={14} />
-                        Open
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
