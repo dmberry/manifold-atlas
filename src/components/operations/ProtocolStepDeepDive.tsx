@@ -53,12 +53,24 @@ function Table({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
+function Th({
+  children,
+  align = "left",
+  tip,
+}: {
+  children: React.ReactNode;
+  align?: "left" | "right";
+  /** Hover description for the column. Rendered via the native title attribute. */
+  tip?: string;
+}) {
   return (
     <th
+      title={tip}
       className={`${
         align === "right" ? "text-right" : "text-left"
-      } px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold`}
+      } px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold ${
+        tip ? "cursor-help decoration-dotted underline-offset-2 decoration-muted-foreground/40 underline" : ""
+      }`}
     >
       {children}
     </th>
@@ -104,14 +116,14 @@ function DistanceDeepDive({ result }: { result: ConceptDistanceResult }) {
       <Table>
         <thead>
           <tr className="border-b border-parchment">
-            <Th>Model</Th>
-            <Th align="right">Cosine</Th>
-            <Th align="right">Distance</Th>
-            <Th align="right">Angular (°)</Th>
-            <Th align="right">Euclidean</Th>
-            <Th align="right">‖A‖</Th>
-            <Th align="right">‖B‖</Th>
-            <Th align="right">Dims</Th>
+            <Th tip="Embedding model that produced this row">Model</Th>
+            <Th align="right" tip="Cosine similarity between the two vectors. 1.0 = identical direction, 0.0 = orthogonal, -1.0 = opposite. Ignores magnitude.">Cosine</Th>
+            <Th align="right" tip="Cosine distance = 1 − cosine similarity. Lower means closer in the manifold.">Distance</Th>
+            <Th align="right" tip="Angular distance in degrees between the two vectors. 0° = identical direction, 90° = orthogonal, 180° = opposite.">Angular (°)</Th>
+            <Th align="right" tip="Euclidean (L2) distance between the two vectors. Depends on both direction and magnitude, unlike cosine.">Euclidean</Th>
+            <Th align="right" tip="L2 norm (magnitude) of the vector for term A.">‖A‖</Th>
+            <Th align="right" tip="L2 norm (magnitude) of the vector for term B.">‖B‖</Th>
+            <Th align="right" tip="Number of dimensions in this model's embedding space.">Dims</Th>
           </tr>
         </thead>
         <tbody className="divide-y divide-parchment">
@@ -147,9 +159,9 @@ function VectorLogicDeepDive({ result }: { result: VectorLogicResult }) {
           <Table>
             <thead>
               <tr className="border-b border-parchment">
-                <Th>Rank</Th>
-                <Th>Concept</Th>
-                <Th align="right">Cosine</Th>
+                <Th tip="Rank in the nearest-neighbours list. 1 = closest to the computed A − B + C vector.">Rank</Th>
+                <Th tip="Candidate concept from this model's reference vocabulary.">Concept</Th>
+                <Th align="right" tip="Cosine similarity between this candidate and the computed A − B + C vector.">Cosine</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-parchment">
@@ -183,11 +195,11 @@ function NegationDeepDive({ result }: { result: NegationGaugeResult }) {
       <Table>
         <thead>
           <tr className="border-b border-parchment">
-            <Th>Model</Th>
-            <Th align="right">Cosine</Th>
-            <Th align="right">Distance</Th>
-            <Th align="right">Angular (°)</Th>
-            <Th align="right">Collapsed?</Th>
+            <Th tip="Embedding model that produced this row.">Model</Th>
+            <Th align="right" tip="Cosine similarity between the claim and its negation. Closer to 1.0 means the manifold treats the claim and its negation as near-identical.">Cosine</Th>
+            <Th align="right" tip="Cosine distance = 1 − cosine similarity. Tiny distance means the negation has barely moved the position.">Distance</Th>
+            <Th align="right" tip="Angular distance in degrees between the claim and its negation. Geometric negation should be close to 180°; in practice it is usually only a few degrees.">Angular (°)</Th>
+            <Th align="right" tip="Yes when cosine similarity is at or above the threshold — the manifold has given negation geometrically trivial space relative to what logic demands.">Collapsed?</Th>
           </tr>
         </thead>
         <tbody className="divide-y divide-parchment">
@@ -238,9 +250,9 @@ function SectioningDeepDive({ result }: { result: SemanticSectioningResult }) {
               <Table>
                 <thead>
                   <tr className="border-b border-parchment">
-                    <Th align="right">t</Th>
-                    <Th>Nearest concept</Th>
-                    <Th align="right">Cosine</Th>
+                    <Th align="right" tip="Interpolation parameter from 0 to 1. t = 0 is anchor A, t = 1 is anchor B, intermediate values walk linearly through embedding space.">t</Th>
+                    <Th tip="Concept from the reference vocabulary whose embedding is closest to the interpolated point at this t.">Nearest concept</Th>
+                    <Th align="right" tip="Cosine similarity between the interpolated vector and the nearest-concept vector.">Cosine</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-parchment">
@@ -292,9 +304,9 @@ function BatteryDeepDive({ result }: { result: NegationBatteryResult }) {
       <Table>
         <thead>
           <tr className="border-b border-parchment">
-            <Th>Statement</Th>
+            <Th tip="The original claim. The row below the label shows its auto-generated negation (after the arrow).">Statement</Th>
             {modelNames.map(n => (
-              <Th key={n} align="right">{n}</Th>
+              <Th key={n} align="right" tip={`Cosine similarity between the claim and its negation, as reported by ${n}. Red means the value is at or above the collapse threshold — the manifold has given this negation geometrically trivial space.`}>{n}</Th>
             ))}
           </tr>
         </thead>
@@ -349,9 +361,9 @@ function AgonismDeepDive({ result }: { result: AgonismTestResult }) {
       <Table>
         <thead>
           <tr className="border-b border-parchment">
-            <Th>Pair</Th>
+            <Th tip="Opposed philosophical pair. Below the label: the two thinkers whose positions are being compared.">Pair</Th>
             {modelNames.map(n => (
-              <Th key={n} align="right">{n}</Th>
+              <Th key={n} align="right" tip={`Cosine similarity between the two opposed positions, as reported by ${n}. Red means the value is at or above the threshold — the manifold has collapsed genuine philosophical opposition into geometric proximity.`}>{n}</Th>
             ))}
           </tr>
         </thead>
