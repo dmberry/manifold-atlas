@@ -4,7 +4,7 @@
 # The Protocol Library sub-tab loads this file on mount and fetches
 # each listed protocol from /protocols/{id}.md.
 
-negation-census
+fake-news-test
 political-geometry-survey
 vector-logic-census
 negation-audit
