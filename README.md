@@ -11,7 +11,7 @@
 
 **Author:** David M. Berry
 **Institution:** University of Sussex
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Date:** 23 April 2026
 **Licence:** MIT
 
@@ -77,7 +77,7 @@ Map the local structure of the manifold around a concept. Enter terms manually, 
 Negation works differently in the manifold than in logic. Where logic treats "A" and "not A" as categorical opposites, the geometry stores them close together, differing in only a few dimensions out of hundreds. The tool embeds both the original statement and its auto-generated negation, measures their cosine similarity, and shows how much space the manifold actually gives to negation. Includes a similarity meter, detailed metrics, and theoretical context on the negation deficit.
 
 ### Negation Battery
-Run a battery of 10-40 negation tests automatically against pre-built sets (political claims, ethical statements, factual assertions, epistemological claims) or custom statements. Produces a report card with collapse rate, average similarity, per-statement results table, and CSV export.
+Run a battery of negation tests automatically against pre-built sets or custom statements. Ships with seven built-in batteries covering political, ethical, factual, epistemological, economic, aesthetic, and technology claims (10 statements each, 70 total). Users can save their own custom statements as named batteries that appear in the dropdown alongside the built-ins and are addressable by name from protocol steps. Produces a report card with collapse rate, average similarity, per-statement results table, and CSV export.
 
 ### Semantic Sectioning
 Interpolate between two anchor concepts in the embedding space to discover what lies between them. The tool walks from concept A to concept B in 20 steps, finding the nearest real concept at each point. The resulting sequence (e.g. solidarity -> cooperation -> agreement -> conformity -> compliance) reveals where one domain shades into another in the manifold's geometry.
