@@ -323,7 +323,7 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
       <div className="space-y-6">
         <div className="card-editorial p-6">
           <div className="flex items-start justify-between mb-1">
-            <h2 className="font-display text-display-md font-bold">Protocol Library</h2>
+            <h2 className="font-display text-display-md font-bold">Library</h2>
           </div>
           <p className="font-sans text-body-sm text-slate">
             Curated sequences of operations, ready to run in one click. Each
