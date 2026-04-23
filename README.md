@@ -11,7 +11,7 @@
 
 **Author:** David M. Berry
 **Institution:** University of Sussex
-**Version:** 1.0.3
+**Version:** 1.1.0
 **Date:** 23 April 2026
 **Licence:** MIT
 
@@ -116,11 +116,17 @@ Persistent homology (Topological Data Analysis) applied to embedding spaces. Mea
 
 ## Library
 
-The Library (fourth tab group) runs curated sequences of operations in one click. Each protocol is a named set of steps with pre-filled inputs that produces a structured, exportable report (Markdown, JSON, CSV). The Library ships with six built-in protocols spanning Demo, Critique, and Research categories — including the 'Fake' News Test (four pre-built batteries plus the full Agonism Test), Political Contestation Test, Vector Logic Test, Negation Audit, Vector Logic Demo, and Concept Distance Demo.
+The Library (fourth tab group) runs curated sequences of operations in one click. Each protocol is a named set of steps with pre-filled inputs that produces a structured, exportable report (Markdown, JSON, CSV, PDF). The Library ships with seven built-in protocols spanning Demo, Critique, and Research categories — including the Hegemonic Defaults Sweep (three Hegemony Compass probes plus a Distance Matrix over political vocabulary), 'Fake' News Test (four pre-built batteries plus the full Agonism Test), Political Contestation Test, Vector Logic Test, Negation Audit, Vector Logic Demo, and Concept Distance Demo.
 
-Every step of every protocol is editable before running. The per-step editor lets you substitute your own claims into a Negation Battery, swap anchors in a Semantic Sectioning walk, change the A − B + C terms, or rewrite the opposed positions in an Agonism Test. Edits apply to the next run and are reflected in the exported bundle, so you can re-run an existing protocol against your own inputs without leaving the app.
+Every step of every protocol is editable before running. The per-step editor lets you substitute your own claims into a Negation Battery, swap anchors in a Semantic Sectioning walk, change the A − B + C terms, reframe the Hegemony Compass, or rewrite the opposed positions in an Agonism Test. Edits apply to the next run and are reflected in the exported bundle, so you can re-run an existing protocol against your own inputs without leaving the app.
 
-You can also add your own protocols. The Add Protocol modal accepts either pasted markdown or an uploaded .md file. A Start-from dropdown lets you load any built-in protocol as a template to edit, or start from a minimal three-step example. Added protocols are persisted in browser storage, appear in the Library alongside the built-ins with a Custom badge, and can be edited or removed at any time. This makes the tool extensible without any code changes: researchers can distribute their own protocol markdown alongside a paper, and anyone with the link can load it into Manifold Atlas.
+Eight of the fifteen operations are wired to the Runner (Concept Distance, Distance Matrix, Vector Logic, Negation Gauge, Negation Battery, Semantic Sectioning, Agonism Test, Hegemony Compass). The remaining visualisation-heavy operations (Neighbourhood Map, Vector Drift, Vector Walk, Text Vectorisation, Persistent Homology, Real Abstraction Test, Silence Detector) remain available in their own tabs.
+
+You can also add your own tests. The Add Test modal accepts either pasted markdown or an uploaded .md file. A Start-from dropdown lets you load any built-in test as a template to edit, or start from a minimal three-step example. Added tests are persisted in browser storage, appear in the Library alongside the built-ins with a Custom badge, and can be edited, downloaded as .md, or removed at any time. This makes the tool extensible without any code changes: researchers can distribute their own test markdown alongside a paper, and anyone with the link can load it into Manifold Atlas.
+
+### PDF export for researchers
+
+Each run produces a research-oriented PDF alongside the Markdown / JSON / CSV exports. The PDF carries the protocol title and description, run metadata (timestamp, elapsed, models, query counts), and a full step-by-step deep dive: per-model distance matrices, nearest-concept rankings, negation collapse tables, interpolation paths, battery and agonism cosine matrices, Distance Matrix contested-geometry rankings, and — for Hegemony Compass steps — the compass itself rendered as a static SVG and embedded per model alongside axis statistics and per-concept positions. Suitable for attaching to a paper, a grant application, or a workshop handout.
 
 ## Supported Embedding Providers
 
