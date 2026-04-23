@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { X, Upload, Plus, Save } from "lucide-react";
+import { X, Upload, Plus, Save, Download } from "lucide-react";
 import type { Protocol } from "@/types/protocols";
 import {
   saveCustomProtocol,
@@ -101,6 +101,21 @@ export function AddProtocolModal({
     setError(null);
   };
 
+  const handleDownload = () => {
+    if (!markdown.trim()) return;
+    // Extract the id from the front matter if present; fall back to a
+    // generic filename so the download still works on a partial draft.
+    const idMatch = /^\s*id:\s*["']?([a-z0-9-]+)["']?\s*$/m.exec(markdown);
+    const filename = `${idMatch?.[1] ?? "custom-test"}.md`;
+    const blob = new Blob([markdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleTemplateChoice = async (choice: string) => {
     setTemplateChoice(choice);
     setError(null);
@@ -141,12 +156,12 @@ export function AddProtocolModal({
         <div className="px-6 pt-6 pb-4 flex items-start justify-between flex-shrink-0">
           <div>
             <h2 className="font-display text-display-md font-bold">
-              {isEdit ? `Edit: ${editing?.title ?? "custom protocol"}` : "Add a protocol"}
+              {isEdit ? `Edit: ${editing?.title ?? "custom test"}` : "Add a test"}
             </h2>
             <p className="font-sans text-caption text-muted-foreground mt-0.5">
               {isEdit
-                ? "Edit the markdown and save to update this protocol in place. You can also change the id to save it under a new name."
-                : "Paste your own protocol markdown, upload a .md file, or start from an existing protocol as a template. Added protocols are saved to this browser and appear in the Library."}
+                ? "Edit the markdown and save to update this test in place. You can also change the id to save it under a new name, or download the current version as a .md file."
+                : "Paste your own test markdown, upload a .md file, or start from an existing test as a template. Added tests are saved to this browser and appear in the Library."}
             </p>
           </div>
           <button onClick={onClose} className="btn-editorial-ghost px-2 py-1">
@@ -200,9 +215,19 @@ export function AddProtocolModal({
             <button
               onClick={() => fileInputRef.current?.click()}
               className="btn-editorial-ghost flex items-center gap-1"
+              title="Load a .md file into the editor. Replaces the current contents."
             >
               <Upload size={14} />
               Upload .md file
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={markdown.trim().length === 0}
+              className="btn-editorial-ghost flex items-center gap-1 disabled:opacity-50"
+              title="Download the current editor contents as a .md file. Works for drafts too."
+            >
+              <Download size={14} />
+              Download .md
             </button>
           </div>
           {!isEdit && templateChoice && templateChoice !== "__blank__" && templateChoice !== "__example__" && (
@@ -263,7 +288,7 @@ export function AddProtocolModal({
             className="btn-editorial-primary flex items-center gap-1 disabled:opacity-50"
           >
             {isEdit ? <Save size={14} /> : <Plus size={14} />}
-            {isEdit ? "Save changes" : "Add to Library"}
+            {isEdit ? "Save changes" : "Add Test"}
           </button>
           <button onClick={onClose} className="btn-editorial-ghost">
             Cancel

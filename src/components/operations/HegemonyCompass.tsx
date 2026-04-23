@@ -33,6 +33,74 @@ interface PlottedConcept {
   simYPos: number;
 }
 
+interface PoleStats {
+  label: string;
+  terms: string[];
+  /** Mean pairwise cosine among the pole's defining sentences. */
+  coherence: number;
+  /** L2 norm of the pole's centroid vector. */
+  centroidNorm: number;
+}
+
+interface ModelAxisStats {
+  modelId: string;
+  modelName: string;
+  dimensions: number;
+  xNeg: PoleStats;
+  xPos: PoleStats;
+  yNeg: PoleStats;
+  yPos: PoleStats;
+  /** Cosine similarity between the two X-axis pole centroids. */
+  xInterPoleCosine: number;
+  /** Cosine similarity between the two Y-axis pole centroids. */
+  yInterPoleCosine: number;
+  /** Euclidean length of the X-axis (centroid distance). */
+  xAxisNorm: number;
+  /** Euclidean length of the Y-axis (centroid distance). */
+  yAxisNorm: number;
+}
+
+function meanVector(vecs: number[][]): number[] {
+  const n = vecs.length;
+  if (n === 0) return [];
+  const out = new Array(vecs[0].length).fill(0);
+  for (const v of vecs) {
+    for (let i = 0; i < v.length; i++) out[i] += v[i];
+  }
+  for (let i = 0; i < out.length; i++) out[i] /= n;
+  return out;
+}
+
+function l2Norm(v: number[]): number {
+  let s = 0;
+  for (const x of v) s += x * x;
+  return Math.sqrt(s);
+}
+
+function euclideanDist(a: number[], b: number[]): number {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) {
+    const d = a[i] - b[i];
+    s += d * d;
+  }
+  return Math.sqrt(s);
+}
+
+/** Mean pairwise cosine among a set of vectors (0 or 1 vector: NaN). */
+function meanPairwiseCosine(vecs: number[][]): number {
+  const n = vecs.length;
+  if (n < 2) return NaN;
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      sum += cosineSimilarity(vecs[i], vecs[j]);
+      count += 1;
+    }
+  }
+  return count === 0 ? NaN : sum / count;
+}
+
 interface HegemonyCompassProps {
   onQueryTime: (time: number) => void;
 }
@@ -43,7 +111,15 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [plottedConcepts, setPlottedConcepts] = useState<PlottedConcept[]>([]);
+  // Per-model axis statistics, recomputed each time plotConcepts runs.
+  // Stored at the preset level (not per concept) so the dashboard can
+  // show the same numbers for any concept plotted under this preset.
+  const [axisStats, setAxisStats] = useState<ModelAxisStats[]>([]);
   const [zoomOverride, setZoomOverride] = useState<number | null>(null);
+  // Bumped by the Recentre button. Feeds the Plotly key so the chart
+  // fully remounts, discarding any pan/zoom state the user accumulated
+  // via mouse interaction.
+  const [recentreKey, setRecentreKey] = useState(0);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   // Custom axis state - prepopulated with an example (Nature vs Culture)
   const [customXNegLabel, setCustomXNegLabel] = useState("Nature");
@@ -96,6 +172,7 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
       const yNegCount = preset.yAxis.negative.terms.length;
 
       const newPoints: PlottedConcept[] = [];
+      const newAxisStats: ModelAxisStats[] = [];
 
       for (const m of enabledModels.filter(m => modelVectors.has(m.id))) {
         const vectors = modelVectors.get(m.id)!;
@@ -132,7 +209,48 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
             simYPos: avgSimYPos,
           });
         }
+
+        // Per-model axis statistics: pole centroids + inter-pole cosines + axis norms.
+        const xNegCentroid = meanVector(xNegVecs);
+        const xPosCentroid = meanVector(xPosVecs);
+        const yNegCentroid = meanVector(yNegVecs);
+        const yPosCentroid = meanVector(yPosVecs);
+        const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
+        newAxisStats.push({
+          modelId: m.id,
+          modelName: spec?.name || m.id,
+          dimensions: vectors[0]?.length ?? 0,
+          xNeg: {
+            label: preset.xAxis.negative.label,
+            terms: preset.xAxis.negative.terms,
+            coherence: meanPairwiseCosine(xNegVecs),
+            centroidNorm: l2Norm(xNegCentroid),
+          },
+          xPos: {
+            label: preset.xAxis.positive.label,
+            terms: preset.xAxis.positive.terms,
+            coherence: meanPairwiseCosine(xPosVecs),
+            centroidNorm: l2Norm(xPosCentroid),
+          },
+          yNeg: {
+            label: preset.yAxis.negative.label,
+            terms: preset.yAxis.negative.terms,
+            coherence: meanPairwiseCosine(yNegVecs),
+            centroidNorm: l2Norm(yNegCentroid),
+          },
+          yPos: {
+            label: preset.yAxis.positive.label,
+            terms: preset.yAxis.positive.terms,
+            coherence: meanPairwiseCosine(yPosVecs),
+            centroidNorm: l2Norm(yPosCentroid),
+          },
+          xInterPoleCosine: cosineSimilarity(xNegCentroid, xPosCentroid),
+          yInterPoleCosine: cosineSimilarity(yNegCentroid, yPosCentroid),
+          xAxisNorm: euclideanDist(xNegCentroid, xPosCentroid),
+          yAxisNorm: euclideanDist(yNegCentroid, yPosCentroid),
+        });
       }
+      setAxisStats(newAxisStats);
 
       // Deduplicate: if a concept+model pair already exists, replace it
       setPlottedConcepts(prev => {
@@ -417,8 +535,19 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                   title="Reset to auto-zoom"
                 >A</button>
               )}
+              <button
+                onClick={() => {
+                  setZoomOverride(null);
+                  setRecentreKey(k => k + 1);
+                }}
+                className="w-7 h-7 rounded-sm bg-card/80 border border-parchment-dark text-foreground hover:bg-card flex items-center justify-center shadow-editorial"
+                title="Recentre — reset any pan/zoom, fit all plotted concepts"
+              >
+                ⌂
+              </button>
             </div>
             <PlotlyPlot
+              key={`${modelId}-${recentreKey}`}
               data={[
                 {
                   x: points.map(p => p.x),
@@ -718,24 +847,114 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
                 </div>
               </details>
 
-              {/* Pole terms reference */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-muted rounded-sm p-2.5">
-                  <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{preset.xAxis.negative.label} (X−)</div>
-                  <p className="font-sans text-caption text-muted-foreground mt-1">{preset.xAxis.negative.terms.join(", ")}</p>
-                </div>
-                <div className="bg-muted rounded-sm p-2.5">
-                  <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{preset.xAxis.positive.label} (X+)</div>
-                  <p className="font-sans text-caption text-muted-foreground mt-1">{preset.xAxis.positive.terms.join(", ")}</p>
-                </div>
-                <div className="bg-muted rounded-sm p-2.5">
-                  <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{preset.yAxis.negative.label} (Y−)</div>
-                  <p className="font-sans text-caption text-muted-foreground mt-1">{preset.yAxis.negative.terms.join(", ")}</p>
-                </div>
-                <div className="bg-muted rounded-sm p-2.5">
-                  <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{preset.yAxis.positive.label} (Y+)</div>
-                  <p className="font-sans text-caption text-muted-foreground mt-1">{preset.yAxis.positive.terms.join(", ")}</p>
-                </div>
+              {/* Pole definitions: per-pole sentence list + coherence/norm stats */}
+              <div>
+                <h4 className="font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                  Pole Definitions
+                </h4>
+                {(() => {
+                  const stats = axisStats.find(a => a.modelId === modelId);
+                  const renderPole = (
+                    p: { label: string; terms: string[] },
+                    axisTag: string,
+                    s: PoleStats | undefined
+                  ) => (
+                    <div className="bg-muted rounded-sm p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="font-sans text-[10px] uppercase tracking-wider font-semibold">
+                          <span className="text-foreground">{p.label}</span>
+                          <span className="text-muted-foreground ml-2">{axisTag} &middot; {p.terms.length} sentences</span>
+                        </div>
+                        {s && (
+                          <div className="font-sans text-[10px] text-muted-foreground tabular-nums">
+                            <span
+                              title="Mean pairwise cosine among this pole's defining sentences. Higher = the pole's definition is internally coherent; lower = the sentences pull in different directions."
+                              className="cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                            >
+                              coherence {Number.isFinite(s.coherence) ? s.coherence.toFixed(3) : "—"}
+                            </span>
+                            <span className="mx-2">|</span>
+                            <span
+                              title="L2 norm of the pole's centroid (mean) vector."
+                              className="cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                            >
+                              ‖centroid‖ {s.centroidNorm.toFixed(3)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <ul className="font-sans text-caption text-muted-foreground space-y-0.5 list-disc pl-5">
+                        {p.terms.map((t, i) => (
+                          <li key={i} className="leading-snug">{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                  return (
+                    <div className="space-y-3">
+                      {/* Axis-level summary table */}
+                      {stats && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full font-sans text-caption">
+                            <thead>
+                              <tr className="border-b border-parchment">
+                                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Axis</th>
+                                <th
+                                  className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                                  title="Cosine similarity between the two pole centroids. High = the poles point in similar directions, so the manifold doesn't treat them as opposed. Low = the poles are genuinely distinct in the geometry."
+                                >
+                                  Inter-pole cos
+                                </th>
+                                <th
+                                  className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                                  title="Euclidean distance between the two pole centroids in embedding space. A measure of how far apart the poles sit."
+                                >
+                                  Axis norm
+                                </th>
+                                <th
+                                  className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40"
+                                  title="Embedding dimensions for this model."
+                                >
+                                  Dims
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-parchment">
+                              <tr>
+                                <td className="px-2 py-1">
+                                  <span className="font-medium">{stats.xNeg.label}</span>
+                                  <span className="text-muted-foreground"> ↔ </span>
+                                  <span className="font-medium">{stats.xPos.label}</span>
+                                </td>
+                                <td className="px-2 py-1 text-right tabular-nums">{stats.xInterPoleCosine.toFixed(4)}</td>
+                                <td className="px-2 py-1 text-right tabular-nums">{stats.xAxisNorm.toFixed(4)}</td>
+                                <td className="px-2 py-1 text-right tabular-nums">{stats.dimensions}</td>
+                              </tr>
+                              <tr>
+                                <td className="px-2 py-1">
+                                  <span className="font-medium">{stats.yNeg.label}</span>
+                                  <span className="text-muted-foreground"> ↔ </span>
+                                  <span className="font-medium">{stats.yPos.label}</span>
+                                </td>
+                                <td className="px-2 py-1 text-right tabular-nums">{stats.yInterPoleCosine.toFixed(4)}</td>
+                                <td className="px-2 py-1 text-right tabular-nums">{stats.yAxisNorm.toFixed(4)}</td>
+                                <td className="px-2 py-1 text-right tabular-nums">{stats.dimensions}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* Per-pole cards with full sentence list + coherence/norm */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {renderPole(preset.xAxis.negative, "X−", stats?.xNeg)}
+                        {renderPole(preset.xAxis.positive, "X+", stats?.xPos)}
+                        {renderPole(preset.yAxis.negative, "Y−", stats?.yNeg)}
+                        {renderPole(preset.yAxis.positive, "Y+", stats?.yPos)}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Export */}

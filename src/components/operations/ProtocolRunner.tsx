@@ -418,7 +418,7 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
               className="btn-editorial-secondary flex items-center gap-1"
             >
               <Plus size={14} />
-              Add protocol
+              Add Test
             </button>
           </div>
           <p className="font-sans text-body-sm text-slate">
