@@ -264,8 +264,8 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
                 className="input-editorial text-body-sm w-full resize-y font-mono"
               />
               <p className="mt-1 font-sans text-caption text-muted-foreground italic">
-                {resolvedInstances.length} parsed · lines that don&rsquo;t match the selected
-                grammar or contain a pipe are skipped.
+                {resolvedInstances.length}
+                {" parsed · lines that don\u2019t match the selected grammar or contain a pipe are skipped."}
               </p>
             </div>
           )}
@@ -321,26 +321,49 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
           <div className="card-editorial p-5">
             <h3 className="font-display text-body-lg font-bold mb-3">Summary</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <SummaryBox label="Grammar" value={result.grammarName} />
-              <SummaryBox label="Source" value={result.register ?? "custom"} />
-              <SummaryBox label="Constructions" value={String(result.summary.totalPairs)} />
-              <SummaryBox label="Tests" value={String(result.summary.totalTests)} />
+              <SummaryBox
+                label="Grammar"
+                value={result.grammarName}
+                tip="The syntactic construction being tested. Different grammars are different rhetorical tics that vector logic produces when asked to sound nuanced (not X but Y, not just X but Y, and more to come)."
+              />
+              <SummaryBox
+                label="Source"
+                value={result.register ?? "custom"}
+                tip="The register that supplies the example constructions. Each register is a curated battery drawn from a characteristic prose style (marketing, AI pedagogical, political op-ed, technology discourse), or the user's own Custom list."
+              />
+              <SummaryBox
+                label="Constructions"
+                value={String(result.summary.totalPairs)}
+                tip="Number of distinct constructions tested in this run. Each one supplies an X and a Y for cosine measurement."
+              />
+              <SummaryBox
+                label="Tests"
+                value={String(result.summary.totalTests)}
+                tip="Number of cosine measurements taken — constructions multiplied by the number of enabled embedding models."
+              />
               <SummaryBox
                 label="Opposition preserved"
                 value={`${(result.summary.preservedRate * 100).toFixed(1)}%`}
                 tone={result.summary.preservedRate < 0.25 ? "error" : result.summary.preservedRate < 0.5 ? "warning" : "success"}
+                tip="Proportion of tests where cosine(X, Y) falls below the threshold — the geometry preserves the antithesis the rhetoric claims. Low rates indicate the rhetoric of opposition exceeds what the geometry delivers; this is pseudo-dialectic at scale."
               />
-              <SummaryBox label="Avg cosine" value={result.summary.avgSimilarity.toFixed(4)} />
+              <SummaryBox
+                label="Avg cosine"
+                value={result.summary.avgSimilarity.toFixed(4)}
+                tip={`Mean cosine similarity between X and Y across all tests, ± ${result.summary.stdDevSimilarity.toFixed(4)} standard deviation. The construction's rhetorical frame claims X and Y are opposed; the closer this value sits to 1.0, the more the rhetoric outruns the geometry.`}
+              />
               <SummaryBox
                 label="Threshold"
                 value={String(result.threshold)}
                 hint="above = pseudo-dialectic · below = opposition preserved"
+                tip="Cosine threshold separating preserved opposition (below) from pseudo-dialectic (above). Use the Deep Dive's threshold sweep to see how sensitive the finding is to this choice — typically stable across the 0.5–0.7 range."
               />
               {result.summary.mostDeceptive && (
                 <SummaryBox
                   label="Most deceptive"
                   value={`"${truncate(result.summary.mostDeceptive.raw, 36)}"`}
                   hint={`cos ${result.summary.mostDeceptive.cosine.toFixed(3)} in ${result.summary.mostDeceptive.modelName}`}
+                  tip="The construction × model combination with the highest cosine similarity — the largest gap between the rhetorical claim of opposition and the cosine reality."
                 />
               )}
             </div>
@@ -770,11 +793,14 @@ function SummaryBox({
   label,
   value,
   hint,
+  tip,
   tone = "neutral",
 }: {
   label: string;
   value: string;
   hint?: string;
+  /** Hover explanation, rendered via the native title attribute with a dotted-underline cursor-help affordance. */
+  tip?: string;
   tone?: "neutral" | "success" | "warning" | "error";
 }) {
   const valueColour = {
@@ -785,7 +811,12 @@ function SummaryBox({
   }[tone];
   return (
     <div className="bg-muted rounded-sm p-3">
-      <div className="font-sans text-caption text-muted-foreground uppercase tracking-wider">
+      <div
+        title={tip}
+        className={`font-sans text-caption text-muted-foreground uppercase tracking-wider ${
+          tip ? "cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40 underline inline-block" : ""
+        }`}
+      >
         {label}
       </div>
       <div className={`font-sans text-body-lg font-bold mt-1 tabular-nums ${valueColour}`}>
