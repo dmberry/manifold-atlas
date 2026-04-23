@@ -1,6 +1,6 @@
 ---
-id: vector-logic-census
-title: Vector Logic Census
+id: vector-logic-test
+title: Vector Logic Test
 category: research
 description: Six A − B + C analogical inferences run in one batch, each producing a per-model top-eight nearest-concept table. The deep-dive lets you scan every model's nearest-neighbour ranking side by side for the classic king-queen case, three political variants (capitalism, democracy, technology), and two philosophical ones (labour-craft, science-art). A quantitatively dense test of whether the manifold's "logic" performs the inferences it implies.
 estimatedQueries: 30

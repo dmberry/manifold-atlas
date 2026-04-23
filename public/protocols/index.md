@@ -6,7 +6,7 @@
 
 fake-news-test
 political-contestation-test
-vector-logic-census
+vector-logic-test
 negation-audit
 vector-logic-demo
 distance-demo
