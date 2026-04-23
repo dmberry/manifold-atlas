@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Crosshair, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Crosshair, Download, Save, Trash2 } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -14,6 +14,12 @@ import {
   negationBatteryTextList,
   type NegationBatteryStatementResult,
 } from "@/lib/operations/negation-battery";
+import {
+  loadUserBatteries,
+  saveUserBattery,
+  removeUserBattery,
+  type UserBatteries,
+} from "@/lib/operations/user-batteries";
 
 const BATTERIES = NEGATION_BATTERIES;
 type BatteryResult = NegationBatteryStatementResult;
@@ -29,13 +35,76 @@ export function NegationBattery({ onQueryTime }: NegationBatteryProps) {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState<unknown>(null);
   const [results, setResults] = useState<BatteryResult[]>([]);
+  const [userBatteries, setUserBatteries] = useState<UserBatteries>({});
   const { settings, getEnabledModels } = useSettings();
   const embedAll = useEmbedAll();
 
+  // Hydrate user batteries from localStorage on mount.
+  useEffect(() => {
+    setUserBatteries(loadUserBatteries());
+  }, []);
+
+  const isBuiltIn = selectedBattery in BATTERIES;
+  const isUser = selectedBattery in userBatteries;
+  const isCustom = selectedBattery === "custom";
+
+  const handleSaveCustom = () => {
+    const statements = customStatements
+      .split("\n")
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    if (statements.length === 0) {
+      setError(new Error("Enter at least one statement to save a battery."));
+      return;
+    }
+    const existingNames = Object.keys({ ...BATTERIES, ...userBatteries });
+    const defaultName = `My battery ${Object.keys(userBatteries).length + 1}`;
+    const name = window.prompt(
+      "Name this battery (it will appear in the dropdown and be addressable from protocols):",
+      defaultName
+    );
+    if (!name) return;
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return;
+    if (trimmed in BATTERIES) {
+      setError(new Error(`"${trimmed}" is a built-in battery name. Choose a different name.`));
+      return;
+    }
+    if (existingNames.includes(trimmed) && trimmed !== selectedBattery) {
+      if (!window.confirm(`A battery called "${trimmed}" already exists. Overwrite?`)) return;
+    }
+    try {
+      saveUserBattery(trimmed, statements);
+      setUserBatteries(loadUserBatteries());
+      setSelectedBattery(trimmed);
+      setCustomStatements("");
+      setError(null);
+    } catch (err) {
+      setError(err);
+    }
+  };
+
+  const handleRemoveUser = () => {
+    if (!isUser) return;
+    if (!window.confirm(`Remove the saved battery "${selectedBattery}"? The statements cannot be recovered.`)) return;
+    removeUserBattery(selectedBattery);
+    setUserBatteries(loadUserBatteries());
+    setSelectedBattery("Political claims");
+  };
+
   const handleRun = async () => {
-    const statements = customStatements.trim()
-      ? customStatements.split("\n").map(s => s.trim()).filter(s => s.length > 0)
-      : BATTERIES[selectedBattery] || [];
+    // Preference:
+    //   1. If Custom is selected and the user has typed statements, use those.
+    //   2. Otherwise, use the selected battery — built-in or user.
+    const customList = customStatements
+      .split("\n")
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    const statements = isCustom
+      ? customList
+      : isUser
+        ? userBatteries[selectedBattery]
+        : BATTERIES[selectedBattery] || [];
 
     if (statements.length === 0) return;
 
@@ -104,28 +173,76 @@ export function NegationBattery({ onQueryTime }: NegationBatteryProps) {
         </p>
 
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <label className="font-sans text-body-sm text-slate">Battery:</label>
             <select
               value={selectedBattery}
               onChange={e => { setSelectedBattery(e.target.value); setCustomStatements(""); }}
               className="input-editorial w-auto py-1.5 px-3 text-body-sm"
             >
-              {Object.keys(BATTERIES).map(name => (
-                <option key={name} value={name}>{name} ({BATTERIES[name].length} tests)</option>
-              ))}
-              <option value="custom">Custom statements</option>
+              <optgroup label="Built-in">
+                {Object.keys(BATTERIES).map(name => (
+                  <option key={name} value={name}>{name} ({BATTERIES[name].length} tests)</option>
+                ))}
+              </optgroup>
+              {Object.keys(userBatteries).length > 0 && (
+                <optgroup label="Your saved batteries">
+                  {Object.keys(userBatteries).map(name => (
+                    <option key={name} value={name}>{name} ({userBatteries[name].length} tests)</option>
+                  ))}
+                </optgroup>
+              )}
+              <option value="custom">Custom statements (don't save)</option>
             </select>
+            {isUser && (
+              <button
+                onClick={handleRemoveUser}
+                className="btn-editorial-ghost flex items-center gap-1 text-caption"
+                title="Remove this saved battery"
+              >
+                <Trash2 size={12} />
+                Remove
+              </button>
+            )}
           </div>
 
-          {selectedBattery === "custom" && (
-            <textarea
-              value={customStatements}
-              onChange={e => setCustomStatements(e.target.value)}
-              placeholder="One statement per line, e.g.&#10;This policy is fair&#10;Nuclear weapons solve war&#10;Art has intrinsic value"
-              className="input-editorial min-h-[120px] resize-y text-body-sm"
-              rows={5}
-            />
+          {isCustom && (
+            <>
+              <textarea
+                value={customStatements}
+                onChange={e => setCustomStatements(e.target.value)}
+                placeholder="One statement per line, e.g.&#10;This policy is fair&#10;Nuclear weapons solve war&#10;Art has intrinsic value"
+                className="input-editorial min-h-[120px] resize-y text-body-sm"
+                rows={5}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveCustom}
+                  disabled={customStatements.trim().length === 0}
+                  className="btn-editorial-ghost flex items-center gap-1 text-caption disabled:opacity-50"
+                  title="Save these statements as a named battery so they appear in the dropdown and can be referenced by name from protocol steps."
+                >
+                  <Save size={12} />
+                  Save as named battery...
+                </button>
+                <span className="font-sans text-caption text-muted-foreground italic">
+                  Saved batteries are stored in this browser and available from the Library's protocol steps.
+                </span>
+              </div>
+            </>
+          )}
+
+          {isUser && (
+            <details className="font-sans text-caption">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                View statements in "{selectedBattery}" ({userBatteries[selectedBattery].length})
+              </summary>
+              <ul className="mt-2 space-y-0.5 list-disc pl-5 text-slate">
+                {userBatteries[selectedBattery].map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            </details>
           )}
 
           <div className="flex items-center justify-between">

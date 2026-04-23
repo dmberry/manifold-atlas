@@ -13,6 +13,7 @@ import { cosineSimilarity } from "@/lib/geometry/cosine";
 import { generateNegation } from "@/lib/negation";
 import { EMBEDDING_MODELS } from "@/types/embeddings";
 import { DEFAULT_NEGATION_THRESHOLD } from "@/lib/operations/negation-gauge";
+import { resolveUserBattery } from "@/lib/operations/user-batteries";
 
 export const NEGATION_BATTERIES: Record<string, string[]> = {
   "Political claims": [
@@ -63,6 +64,42 @@ export const NEGATION_BATTERIES: Record<string, string[]> = {
     "Certainty is possible",
     "Perception is reliable",
   ],
+  "Economic claims": [
+    "Free markets efficiently allocate resources",
+    "Minimum wage laws reduce employment",
+    "Economic growth requires inequality",
+    "Inflation is caused by expanding the money supply",
+    "Capitalism has lifted billions out of poverty",
+    "Private property is the foundation of prosperity",
+    "Public spending crowds out private investment",
+    "Trade deficits weaken an economy",
+    "Globalisation benefits everyone",
+    "Central bank independence is essential",
+  ],
+  "Aesthetic claims": [
+    "Beauty is in the eye of the beholder",
+    "Great art is universal",
+    "Aesthetic value is objective",
+    "Popular art is inferior to high art",
+    "Technique matters more than expression",
+    "All representation is political",
+    "Form follows function",
+    "Originality is the mark of genuine art",
+    "Art should be useful",
+    "The artist's intention determines meaning",
+  ],
+  "Technology claims": [
+    "Artificial intelligence is a form of reasoning",
+    "Algorithms are neutral",
+    "Technology makes society more democratic",
+    "Social media connects people",
+    "Data speaks for itself",
+    "Automation creates more jobs than it destroys",
+    "The internet is decentralised",
+    "Machines can be creative",
+    "Code is law",
+    "Surveillance keeps us safe",
+  ],
 };
 
 export interface NegationBatteryInputs {
@@ -102,14 +139,16 @@ export interface NegationBatteryResult {
 }
 
 /**
- * Look up a battery preset by its canonical name (keys of
- * NEGATION_BATTERIES). Returns null for unknown names.
+ * Look up a battery preset by its canonical name. Checks the built-in
+ * NEGATION_BATTERIES first, then falls through to user-defined
+ * batteries stored in localStorage. Returns null if not found.
  */
 export function resolveNegationBatteryPreset(
   name: string | undefined
 ): string[] | null {
   if (!name) return null;
-  return NEGATION_BATTERIES[name] ?? null;
+  if (name in NEGATION_BATTERIES) return NEGATION_BATTERIES[name];
+  return resolveUserBattery(name);
 }
 
 /**

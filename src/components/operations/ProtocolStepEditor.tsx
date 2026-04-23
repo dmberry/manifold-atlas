@@ -13,7 +13,7 @@
  * defaults, but every list / term / statement is a starting point.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import type { ProtocolStep } from "@/types/protocols";
 import type { TabId } from "@/components/layout/TabNav";
@@ -21,6 +21,7 @@ import {
   NEGATION_BATTERIES,
   resolveNegationBatteryPreset,
 } from "@/lib/operations/negation-battery";
+import { loadUserBatteries } from "@/lib/operations/user-batteries";
 import { AGONISM_PAIRS, type AgonismPair } from "@/lib/operations/agonism-test";
 
 /** Tab labels for the section headers. */
@@ -257,6 +258,12 @@ function SectioningEditor({ step, edits, onChange }: Omit<StepEditorProps, "step
 }
 
 function BatteryEditor({ step, edits, onChange }: Omit<StepEditorProps, "stepIndex">) {
+  // Hydrate user batteries once so they appear in the preset dropdown.
+  const [userBatteries, setUserBatteries] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    setUserBatteries(loadUserBatteries());
+  }, []);
+
   // Resolve the default statement list: either preset or inline.
   const stepPreset = typeof step.inputs.preset === "string" ? step.inputs.preset : undefined;
   const defaultList: string[] = useMemo(() => {
@@ -286,12 +293,14 @@ function BatteryEditor({ step, edits, onChange }: Omit<StepEditorProps, "stepInd
     onChange(nextEdits);
   };
 
-  const presetList = stepPreset ? Object.keys(NEGATION_BATTERIES) : [];
+  const builtInNames = Object.keys(NEGATION_BATTERIES);
+  const userNames = Object.keys(userBatteries);
+  const showDropdown = stepPreset !== undefined;
 
   return (
     <div className="space-y-2">
-      {stepPreset && (
-        <div className="flex items-center gap-2 font-sans text-caption text-muted-foreground">
+      {showDropdown && (
+        <div className="flex items-center gap-2 font-sans text-caption text-muted-foreground flex-wrap">
           <span>Preset:</span>
           <select
             value={stepPreset}
@@ -303,9 +312,18 @@ function BatteryEditor({ step, edits, onChange }: Omit<StepEditorProps, "stepInd
             }}
             className="input-editorial text-caption py-1 px-2 w-auto"
           >
-            {presetList.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
+            <optgroup label="Built-in">
+              {builtInNames.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </optgroup>
+            {userNames.length > 0 && (
+              <optgroup label="Your saved batteries">
+                {userNames.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <span>({currentList.length} statements)</span>
         </div>
@@ -318,7 +336,9 @@ function BatteryEditor({ step, edits, onChange }: Omit<StepEditorProps, "stepInd
         placeholder={"This policy is fair\nMarkets are free\n..."}
       />
       <p className="font-sans text-caption text-muted-foreground italic">
-        Each line is a claim; its negation is auto-generated at run time.
+        Each line is a claim; its negation is auto-generated at run time. To
+        save the current list as a reusable battery, open the Negation Battery
+        tab and use "Save as named battery".
       </p>
     </div>
   );
