@@ -328,7 +328,7 @@ export function ProtocolRunner({ onQueryTime, subTab, onSubTabChange }: Protocol
           <p className="font-sans text-body-sm text-slate">
             Curated sequences of operations, ready to run in one click. Each
             protocol tests a specific claim from the vector theory framework
-            and produces an exportable report. Designed for DMI workshops and
+            and produces an exportable report. Designed for workshops and
             research reproducibility.
           </p>
         </div>

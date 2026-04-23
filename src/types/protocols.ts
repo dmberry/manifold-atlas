@@ -4,7 +4,7 @@
  * A protocol is a named sequence of operations with pre-set inputs,
  * runnable in one click and exportable as a structured report.
  *
- * Designed for DMI workshops and research reproducibility. Each run
+ * Designed for workshops and research reproducibility. Each run
  * carries timestamps and model fingerprints so results are citable.
  * Provenance attestation reserved for future Manifoldscope integration.
  *
