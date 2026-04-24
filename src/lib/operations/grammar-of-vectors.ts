@@ -68,6 +68,20 @@ export interface GrammarInstance {
   parts: [string, string];
   /** Optional label for the source or author. */
   source?: string;
+  /**
+   * Optional provenance from an LLMbench Grammar Probe bundle. When
+   * present, the instance is one Y candidate drawn from a forced-
+   * continuation probe, carrying the logprob rank we need to compute
+   * the Spearman correlation against cosine-to-X rank.
+   */
+  probeMeta?: {
+    scaffoldId: string;
+    scaffold: string;
+    /** Rank within the probe's ys[] (1 = most probable). */
+    logprobRank: number;
+    /** Raw logprob from the producing model. */
+    logprob: number;
+  };
 }
 
 export interface Grammar {
