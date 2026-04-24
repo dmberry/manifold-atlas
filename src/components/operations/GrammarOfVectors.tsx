@@ -450,10 +450,10 @@ export function GrammarOfVectors({ onQueryTime }: GrammarOfVectorsProps) {
             <p className="font-body text-body-sm text-slate italic">
               The grammar of vectors expresses what the geometry permits. When a
               construction claims opposition that the cosine cannot deliver, the
-              rhetoric is performing more than the medium can support. <em>Synthetic dialectic</em>
-              is the name for that gap: a rhetorical performance of thesis and antithesis
-              whose underlying geometric move is a slight rotation between near-neighbours.
-              Dialectic as style, not as operation.
+              rhetoric is performing more than the medium can support.{" "}
+              <em>Synthetic dialectic</em> is the name for that gap: a rhetorical performance
+              of thesis and antithesis whose underlying geometric move is a slight rotation
+              between near-neighbours. Dialectic as style, not as operation.
             </p>
           </div>
 

@@ -17,8 +17,8 @@ authors:
 repository-code: "https://github.com/vector-lab-tools/manifold-atlas"
 url: "https://vector-lab-tools.github.io"
 license: MIT
-version: "1.2.3"
-date-released: "2026-04-23"
+version: "1.2.4"
+date-released: "2026-04-24"
 keywords:
   - vector theory
   - critical theory
