@@ -6,10 +6,12 @@ import { Loader2, Plus, ChevronRight, ChevronDown, Download } from "lucide-react
 import { useSettings } from "@/context/SettingsContext";
 import { useEmbedAll } from "@/components/shared/useEmbedAll";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { cosineSimilarity } from "@/lib/geometry/cosine";
 import { ResetButton } from "@/components/shared/ResetButton";
 import { BenchmarkLoader } from "@/components/shared/BenchmarkLoader";
-import { EMBEDDING_MODELS } from "@/types/embeddings";
+import {
+  computeHegemonyCompass,
+  hegemonyCompassTextList,
+} from "@/lib/operations/hegemony-compass";
 
 const PlotlyPlot = dynamic(
   () => import("@/components/viz/PlotlyPlot").then(mod => ({ default: mod.PlotlyPlot })),
@@ -58,47 +60,6 @@ interface ModelAxisStats {
   xAxisNorm: number;
   /** Euclidean length of the Y-axis (centroid distance). */
   yAxisNorm: number;
-}
-
-function meanVector(vecs: number[][]): number[] {
-  const n = vecs.length;
-  if (n === 0) return [];
-  const out = new Array(vecs[0].length).fill(0);
-  for (const v of vecs) {
-    for (let i = 0; i < v.length; i++) out[i] += v[i];
-  }
-  for (let i = 0; i < out.length; i++) out[i] /= n;
-  return out;
-}
-
-function l2Norm(v: number[]): number {
-  let s = 0;
-  for (const x of v) s += x * x;
-  return Math.sqrt(s);
-}
-
-function euclideanDist(a: number[], b: number[]): number {
-  let s = 0;
-  for (let i = 0; i < a.length; i++) {
-    const d = a[i] - b[i];
-    s += d * d;
-  }
-  return Math.sqrt(s);
-}
-
-/** Mean pairwise cosine among a set of vectors (0 or 1 vector: NaN). */
-function meanPairwiseCosine(vecs: number[][]): number {
-  const n = vecs.length;
-  if (n < 2) return NaN;
-  let sum = 0;
-  let count = 0;
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      sum += cosineSimilarity(vecs[i], vecs[j]);
-      count += 1;
-    }
-  }
-  return count === 0 ? NaN : sum / count;
 }
 
 interface HegemonyCompassProps {
@@ -157,97 +118,49 @@ export function HegemonyCompass({ onQueryTime }: HegemonyCompassProps) {
     const start = performance.now();
 
     try {
-      const allAxisTerms = [
-        ...preset.xAxis.negative.terms,
-        ...preset.xAxis.positive.terms,
-        ...preset.yAxis.negative.terms,
-        ...preset.yAxis.positive.terms,
-      ];
-      const allTexts = [...concepts, ...allAxisTerms];
-      const modelVectors = await embedAll(allTexts);
+      // Delegate every embedding and all geometry to the pure-compute
+      // module so the standalone component and the Runner produce
+      // bit-identical results from the same inputs.
+      const inputs = {
+        xAxis: preset.xAxis,
+        yAxis: preset.yAxis,
+        concepts,
+      };
+      const texts = hegemonyCompassTextList(inputs);
+      const modelVectors = await embedAll(texts);
       const enabledModels = getEnabledModels();
+      const computed = computeHegemonyCompass(inputs, modelVectors, enabledModels);
 
-      const xNegCount = preset.xAxis.negative.terms.length;
-      const xPosCount = preset.xAxis.positive.terms.length;
-      const yNegCount = preset.yAxis.negative.terms.length;
-
+      // Flatten into the shapes the render code already expects:
+      // PlottedConcept[] (one per point × model) and ModelAxisStats[].
       const newPoints: PlottedConcept[] = [];
       const newAxisStats: ModelAxisStats[] = [];
-
-      for (const m of enabledModels.filter(m => modelVectors.has(m.id))) {
-        const vectors = modelVectors.get(m.id)!;
-
-        // Axis vectors start after all concepts
-        const axisOffset = concepts.length;
-        let offset = axisOffset;
-        const xNegVecs = vectors.slice(offset, offset + xNegCount); offset += xNegCount;
-        const xPosVecs = vectors.slice(offset, offset + xPosCount); offset += xPosCount;
-        const yNegVecs = vectors.slice(offset, offset + yNegCount); offset += yNegCount;
-        const yPosVecs = vectors.slice(offset);
-
-        for (let ci = 0; ci < concepts.length; ci++) {
-          const conceptVec = vectors[ci];
-
-          const avgSimXNeg = xNegVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / xNegVecs.length;
-          const avgSimXPos = xPosVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / xPosVecs.length;
-          const avgSimYNeg = yNegVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / yNegVecs.length;
-          const avgSimYPos = yPosVecs.reduce((s, v) => s + cosineSimilarity(conceptVec, v), 0) / yPosVecs.length;
-
-          const x = avgSimXPos - avgSimXNeg;
-          const y = avgSimYPos - avgSimYNeg;
-
-          const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
+      for (const m of computed.models) {
+        for (const pt of m.points) {
           newPoints.push({
-            concept: concepts[ci],
-            x,
-            y,
-            modelId: m.id,
-            modelName: spec?.name || m.id,
-            simXNeg: avgSimXNeg,
-            simXPos: avgSimXPos,
-            simYNeg: avgSimYNeg,
-            simYPos: avgSimYPos,
+            concept: pt.concept,
+            x: pt.x,
+            y: pt.y,
+            modelId: m.modelId,
+            modelName: m.modelName,
+            simXNeg: pt.simXNeg,
+            simXPos: pt.simXPos,
+            simYNeg: pt.simYNeg,
+            simYPos: pt.simYPos,
           });
         }
-
-        // Per-model axis statistics: pole centroids + inter-pole cosines + axis norms.
-        const xNegCentroid = meanVector(xNegVecs);
-        const xPosCentroid = meanVector(xPosVecs);
-        const yNegCentroid = meanVector(yNegVecs);
-        const yPosCentroid = meanVector(yPosVecs);
-        const spec = EMBEDDING_MODELS.find(s => s.id === m.id);
         newAxisStats.push({
-          modelId: m.id,
-          modelName: spec?.name || m.id,
-          dimensions: vectors[0]?.length ?? 0,
-          xNeg: {
-            label: preset.xAxis.negative.label,
-            terms: preset.xAxis.negative.terms,
-            coherence: meanPairwiseCosine(xNegVecs),
-            centroidNorm: l2Norm(xNegCentroid),
-          },
-          xPos: {
-            label: preset.xAxis.positive.label,
-            terms: preset.xAxis.positive.terms,
-            coherence: meanPairwiseCosine(xPosVecs),
-            centroidNorm: l2Norm(xPosCentroid),
-          },
-          yNeg: {
-            label: preset.yAxis.negative.label,
-            terms: preset.yAxis.negative.terms,
-            coherence: meanPairwiseCosine(yNegVecs),
-            centroidNorm: l2Norm(yNegCentroid),
-          },
-          yPos: {
-            label: preset.yAxis.positive.label,
-            terms: preset.yAxis.positive.terms,
-            coherence: meanPairwiseCosine(yPosVecs),
-            centroidNorm: l2Norm(yPosCentroid),
-          },
-          xInterPoleCosine: cosineSimilarity(xNegCentroid, xPosCentroid),
-          yInterPoleCosine: cosineSimilarity(yNegCentroid, yPosCentroid),
-          xAxisNorm: euclideanDist(xNegCentroid, xPosCentroid),
-          yAxisNorm: euclideanDist(yNegCentroid, yPosCentroid),
+          modelId: m.modelId,
+          modelName: m.modelName,
+          dimensions: m.dimensions,
+          xNeg: m.xNeg,
+          xPos: m.xPos,
+          yNeg: m.yNeg,
+          yPos: m.yPos,
+          xInterPoleCosine: m.xInterPoleCosine,
+          yInterPoleCosine: m.yInterPoleCosine,
+          xAxisNorm: m.xAxisNorm,
+          yAxisNorm: m.yAxisNorm,
         });
       }
       setAxisStats(newAxisStats);
