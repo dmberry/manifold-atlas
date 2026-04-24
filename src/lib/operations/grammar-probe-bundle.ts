@@ -122,25 +122,32 @@ export function parseBundle(text: string): BundleParseResult {
   const createdAt = typeof raw.createdAt === "string" ? raw.createdAt : "";
   if (!createdAt) warnings.push("createdAt is missing; provenance will be incomplete.");
 
-  const source = isRecord(raw.source) ? raw.source : null;
-  if (!source || typeof source.tool !== "string" || typeof source.version !== "string") {
-    return { ok: false, error: "source.tool and source.version are required strings." };
-  }
+  // Be permissive on metadata fields — only the probes payload actually
+  // drives computation. Missing / empty values are replaced with
+  // "unknown" so the run can proceed and the warnings list surfaces
+  // the gaps to the user.
+  const source = isRecord(raw.source) ? raw.source : {};
+  const sourceTool = typeof source.tool === "string" && source.tool ? source.tool : "unknown";
+  const sourceVersion = typeof source.version === "string" && source.version ? source.version : "unknown";
+  if (sourceTool === "unknown") warnings.push("source.tool is missing.");
+  if (sourceVersion === "unknown") warnings.push("source.version is missing.");
 
-  const pattern = isRecord(raw.pattern) ? raw.pattern : null;
-  if (!pattern || typeof pattern.id !== "string" || typeof pattern.label !== "string") {
-    return { ok: false, error: "pattern.id and pattern.label are required strings." };
-  }
+  const pattern = isRecord(raw.pattern) ? raw.pattern : {};
+  const patternId =
+    typeof pattern.id === "string" && pattern.id ? pattern.id : "unknown-pattern";
+  const patternLabel =
+    typeof pattern.label === "string" && pattern.label ? pattern.label : patternId;
+  if (patternId === "unknown-pattern") warnings.push("pattern.id is missing.");
 
-  const model = isRecord(raw.model) ? raw.model : null;
-  if (!model || typeof model.provider !== "string" || typeof model.name !== "string") {
-    return { ok: false, error: "model.provider and model.name are required strings." };
-  }
+  const model = isRecord(raw.model) ? raw.model : {};
+  const modelProvider =
+    typeof model.provider === "string" && model.provider ? model.provider : "unknown";
+  const modelName =
+    typeof model.name === "string" && model.name ? model.name : "unknown";
+  if (modelProvider === "unknown") warnings.push("model.provider is missing or empty.");
+  if (modelName === "unknown") warnings.push("model.name is missing or empty.");
 
-  const parameters = isRecord(raw.parameters) ? raw.parameters : null;
-  if (!parameters) {
-    return { ok: false, error: "parameters object is required." };
-  }
+  const parameters = isRecord(raw.parameters) ? raw.parameters : {};
 
   const probesRaw = raw.probes;
   if (!Array.isArray(probesRaw) || probesRaw.length === 0) {
@@ -236,19 +243,19 @@ export function parseBundle(text: string): BundleParseResult {
     format,
     createdAt,
     source: {
-      tool: source.tool,
-      version: source.version,
+      tool: sourceTool,
+      version: sourceVersion,
       phase: typeof source.phase === "string" ? source.phase : undefined,
     },
     pattern: {
-      id: pattern.id,
-      label: pattern.label,
+      id: patternId,
+      label: patternLabel,
       category: typeof pattern.category === "string" ? pattern.category : undefined,
       note: typeof pattern.note === "string" ? pattern.note : undefined,
     },
     model: {
-      provider: model.provider,
-      name: model.name,
+      provider: modelProvider,
+      name: modelName,
       displayName: typeof model.displayName === "string" ? model.displayName : undefined,
     },
     parameters: {
