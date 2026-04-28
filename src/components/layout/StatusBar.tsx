@@ -14,7 +14,7 @@ export function StatusBar({ lastQueryTime }: StatusBarProps) {
   const enabledCount = getEnabledModels().length;
 
   return (
-    <footer className="border-t border-parchment-dark px-6 py-2 flex items-center gap-6 font-sans text-caption text-slate">
+    <footer className="sticky bottom-0 z-30 bg-card border-t border-parchment-dark px-6 py-2 flex items-center gap-6 font-sans text-caption text-slate">
       <span>
         <span className="text-ink font-medium">v{VERSION}</span>
       </span>
