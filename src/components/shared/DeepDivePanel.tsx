@@ -1,0 +1,83 @@
+"use client";
+
+/**
+ * Shared Deep Dive panel.
+ *
+ * A collapsible card that hangs at the bottom of every operation,
+ * carrying the detailed quantitative data the headline view abstracts
+ * away from. Convention (carried over from Vectorscope): every
+ * operation gets one of these, populated with whatever per-model
+ * geometry table, distribution, threshold sweep, or aggregate the op
+ * can produce. Keeps the chevron / tagline / body composition
+ * consistent across operations so the user learns the affordance once.
+ *
+ * Children render lazily — only mounted when the panel is open. Use
+ * this for tables and charts whose computation is non-trivial.
+ */
+
+import { useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+
+interface DeepDivePanelProps {
+  /** Short tagline shown next to the "Deep Dive" header. Single line. */
+  tagline?: string;
+  /** Initial open state. Defaults to false. */
+  defaultOpen?: boolean;
+  /** Panel content; rendered only when open. */
+  children: ReactNode;
+}
+
+export function DeepDivePanel({ tagline, defaultOpen = false, children }: DeepDivePanelProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="card-editorial overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-5 py-3 flex items-center gap-2 hover:bg-cream/50 transition-colors"
+      >
+        {open ? (
+          <ChevronDown size={14} className="text-burgundy" />
+        ) : (
+          <ChevronRight size={14} className="text-muted-foreground" />
+        )}
+        <span className="font-display text-body-lg font-bold">Deep Dive</span>
+        {tagline && (
+          <span className="ml-2 font-sans text-caption text-muted-foreground text-left">
+            {tagline}
+          </span>
+        )}
+      </button>
+      {open && <div className="px-5 pb-5 pt-1 border-t border-parchment">{children}</div>}
+    </div>
+  );
+}
+
+/**
+ * Section heading inside a Deep Dive panel. Hover-tip-supporting via
+ * the dotted-underline affordance the Grammar Deep Dive uses.
+ */
+export function DeepDiveSection({
+  title,
+  tip,
+  children,
+}: {
+  title: string;
+  tip?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-2 mt-5 first:mt-0">
+      <h4
+        title={tip}
+        className={`font-sans text-caption text-muted-foreground uppercase tracking-wider font-semibold inline-block ${
+          tip
+            ? "cursor-help decoration-dotted underline underline-offset-2 decoration-muted-foreground/40 underline"
+            : ""
+        }`}
+      >
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
+}

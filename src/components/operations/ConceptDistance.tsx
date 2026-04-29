@@ -15,6 +15,7 @@ import {
   computeConceptDistance,
   type ConceptDistanceResult,
 } from "@/lib/operations/concept-distance";
+import { DeepDivePanel, DeepDiveSection } from "@/components/shared/DeepDivePanel";
 
 const DEFAULT_A = "solidarity";
 const DEFAULT_B = "compliance";
@@ -359,8 +360,130 @@ export function ConceptDistance({ onQueryTime }: ConceptDistanceProps) {
               </div>
             );
           })}
+
+          <ConceptDistanceDeepDive result={result} />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Cross-model Deep Dive for Concept Distance. Shows aggregate stats
+ * across every enabled embedding model: mean cosine, standard
+ * deviation, cross-model range, an interpretive paragraph on whether
+ * the finding looks structural (models agree) or contingent (models
+ * diverge), plus a side-by-side comparison table covering every
+ * geometric measure for every model.
+ */
+function ConceptDistanceDeepDive({ result }: { result: ConceptDistanceResult }) {
+  const models = result.models;
+  const n = models.length;
+  if (n === 0) return null;
+
+  const cosines = models.map(m => m.cosineSimilarity);
+  const mean = cosines.reduce((s, x) => s + x, 0) / n;
+  const variance = n > 1 ? cosines.reduce((s, x) => s + (x - mean) ** 2, 0) / n : 0;
+  const stdDev = Math.sqrt(variance);
+  const minCos = Math.min(...cosines);
+  const maxCos = Math.max(...cosines);
+  const range = maxCos - minCos;
+
+  // Reading: low range = structural; mid = mixed; high = contingent.
+  const readingTone = range < 0.05 ? "success" : range < 0.15 ? "warning" : "error";
+  const readingText =
+    range < 0.05
+      ? "Models converge on a similar similarity. The finding is structural — different training corpora and architectures all encode the same geometric relationship between these two concepts. Treat the result as evidence about the vectorial regime, not about a single model's quirks."
+      : range < 0.15
+      ? "Models partly agree but diverge in magnitude. The finding is robust in direction but contingent in degree. Useful for qualitative reading, but be careful about citing a specific cosine value as if it were the answer."
+      : "Models disagree substantially. The finding is contingent on training decisions: this concept pair sits in a part of the manifold where different models encode different relationships. The disagreement is itself the finding — it tells you these concepts are politically or methodologically contested across the embedding ecosystem.";
+
+  return (
+    <DeepDivePanel tagline="cross-model summary · per-model comparison · agreement reading">
+      <DeepDiveSection
+        title="Cross-model summary"
+        tip="Aggregate cosine similarity across every enabled embedding model. Low cross-model range = the finding is structural and reproducible; high range = the finding is contingent on which model you ask."
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SummaryStat label="Models" value={String(n)} hint="enabled and successfully embedded" />
+          <SummaryStat label="Mean cosine" value={mean.toFixed(4)} hint={`± ${stdDev.toFixed(4)} std dev`} />
+          <SummaryStat
+            label="Range"
+            value={range.toFixed(4)}
+            hint={`min ${minCos.toFixed(3)} · max ${maxCos.toFixed(3)}`}
+            tone={readingTone}
+          />
+          <SummaryStat
+            label="Agreement"
+            value={range < 0.05 ? "high" : range < 0.15 ? "mixed" : "low"}
+            hint={range < 0.05 ? "structural finding" : range < 0.15 ? "robust direction" : "contingent finding"}
+            tone={readingTone}
+          />
+        </div>
+        <p className="mt-3 font-body text-body-sm text-slate italic">{readingText}</p>
+      </DeepDiveSection>
+
+      <DeepDiveSection
+        title="Per-model comparison"
+        tip="Every geometric measure for every model side-by-side. Useful for sanity-checking and CSV export."
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full font-sans text-caption">
+            <thead>
+              <tr className="border-b border-parchment">
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Model</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Cosine</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Distance</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Angular (°)</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Euclidean</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">‖A‖</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">‖B‖</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Dims</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-parchment">
+              {models.map(m => (
+                <tr key={m.modelId}>
+                  <td className="px-2 py-1 font-medium">{m.modelName}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.cosineSimilarity.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.cosineDistance.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.angularDistance.toFixed(1)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.euclideanDistance.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.normA.toFixed(3)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.normB.toFixed(3)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.dimensions}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </DeepDiveSection>
+    </DeepDivePanel>
+  );
+}
+
+function SummaryStat({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "neutral" | "success" | "warning" | "error";
+}) {
+  const colour = {
+    neutral: "",
+    success: "text-success-600",
+    warning: "text-warning-500",
+    error: "text-error-500",
+  }[tone];
+  return (
+    <div className="bg-muted rounded-sm p-3">
+      <div className="font-sans text-caption text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className={`font-sans text-body-lg font-bold mt-1 tabular-nums ${colour}`}>{value}</div>
+      {hint && <div className="font-sans text-caption text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }

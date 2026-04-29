@@ -12,6 +12,7 @@ import {
   vectorLogicTextList,
   type VectorLogicModelResult,
 } from "@/lib/operations/vector-logic";
+import { DeepDivePanel, DeepDiveSection } from "@/components/shared/DeepDivePanel";
 
 const PRESETS = [
   { a: "king", b: "man", c: "woman", label: "king - man + woman = ?" },
@@ -275,6 +276,161 @@ export function VectorLogic({ onQueryTime }: VectorLogicProps) {
           )}
         </div>
       ))}
+
+      {results.length > 0 && <VectorLogicDeepDive results={results} />}
+    </div>
+  );
+}
+
+/**
+ * Cross-model Deep Dive for Vector Logic. Reports whether enabled
+ * models agree on the top-1 nearest concept (the strongest reading of
+ * the analogy) and on the top-3 set (a softer reading via Jaccard
+ * overlap). When models converge, the analogy is structural; when
+ * they diverge, the manifold's vector logic depends on which model
+ * you ask.
+ */
+function VectorLogicDeepDive({ results }: { results: VectorLogicModelResult[] }) {
+  const n = results.length;
+  if (n === 0) return null;
+
+  // Top-1 agreement: count of distinct top-1 concepts.
+  const top1s = results.map(r => r.nearest[0]?.concept ?? "?");
+  const distinctTop1 = new Set(top1s);
+  const allAgreeTop1 = distinctTop1.size === 1;
+  const modalTop1 = (() => {
+    const counts = new Map<string, number>();
+    for (const c of top1s) counts.set(c, (counts.get(c) ?? 0) + 1);
+    let best = top1s[0];
+    let bestCount = 0;
+    for (const [c, k] of counts) {
+      if (k > bestCount) {
+        best = c;
+        bestCount = k;
+      }
+    }
+    return { concept: best, count: bestCount };
+  })();
+
+  // Top-3 Jaccard: pairwise mean across models.
+  let jaccardSum = 0;
+  let jaccardPairs = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = new Set(results[i].nearest.slice(0, 3).map(x => x.concept));
+      const b = new Set(results[j].nearest.slice(0, 3).map(x => x.concept));
+      const inter = new Set([...a].filter(x => b.has(x))).size;
+      const uni = new Set([...a, ...b]).size;
+      if (uni > 0) {
+        jaccardSum += inter / uni;
+        jaccardPairs += 1;
+      }
+    }
+  }
+  const meanJaccard = jaccardPairs > 0 ? jaccardSum / jaccardPairs : 1;
+
+  const top1Cosines = results.map(r => r.nearest[0]?.similarity ?? 0);
+  const meanCos = top1Cosines.reduce((s, x) => s + x, 0) / Math.max(1, n);
+  const minCos = Math.min(...top1Cosines);
+  const maxCos = Math.max(...top1Cosines);
+
+  const reading =
+    n === 1
+      ? "Only one model was enabled. Enable additional embedding models to test whether the analogy is structural or contingent."
+      : allAgreeTop1
+      ? `All ${n} models agree on the top-1 result (“${modalTop1.concept}”). The analogy is structural — different training corpora and architectures all complete the proportion the same way. Treat the result as evidence about the vectorial regime, not about a single model's quirks.`
+      : meanJaccard >= 0.5
+      ? `Models disagree on the top-1 (${distinctTop1.size} distinct first answers across ${n} models, modal “${modalTop1.concept}” in ${modalTop1.count}) but their top-3 sets overlap substantially (mean Jaccard ${meanJaccard.toFixed(2)}). The analogy is robust as a region of the manifold but contingent at the granularity of a single best answer.`
+      : `Models disagree on both top-1 and top-3 (mean Jaccard ${meanJaccard.toFixed(2)}). The analogy you tested is contingent on which model you ask. The disagreement is itself the finding — different models encode different vector logics for this conceptual move.`;
+
+  return (
+    <DeepDivePanel tagline="cross-model agreement on top-1 · top-3 Jaccard · per-model comparison">
+      <DeepDiveSection
+        title="Cross-model agreement"
+        tip="Do enabled embedding models agree on the analogy's answer? Top-1 agreement = a strong reading; top-3 Jaccard ≥ 0.5 = the answer falls in the same neighbourhood across models even when the single best concept differs."
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SummaryStat label="Models" value={String(n)} hint="enabled and embedded" />
+          <SummaryStat
+            label="Top-1 agreement"
+            value={allAgreeTop1 ? "all agree" : `${modalTop1.count}/${n} agree`}
+            hint={allAgreeTop1 ? `“${modalTop1.concept}”` : `modal “${modalTop1.concept}”`}
+            tone={allAgreeTop1 ? "success" : modalTop1.count >= n / 2 ? "warning" : "error"}
+          />
+          <SummaryStat
+            label="Top-3 Jaccard"
+            value={meanJaccard.toFixed(2)}
+            hint="mean overlap across model pairs"
+            tone={meanJaccard >= 0.7 ? "success" : meanJaccard >= 0.4 ? "warning" : "error"}
+          />
+          <SummaryStat
+            label="Top-1 cosine"
+            value={meanCos.toFixed(4)}
+            hint={`min ${minCos.toFixed(3)} · max ${maxCos.toFixed(3)}`}
+          />
+        </div>
+        <p className="mt-3 font-body text-body-sm text-slate italic">{reading}</p>
+      </DeepDiveSection>
+
+      <DeepDiveSection
+        title="Per-model top-3"
+        tip="Each model's three nearest concepts to A − B + C, side-by-side. Useful for spotting whether disagreement is at the surface (different top-1, same top-3 set) or all the way down."
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full font-sans text-caption">
+            <thead>
+              <tr className="border-b border-parchment">
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Model</th>
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top-1</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Cos</th>
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top-2</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Cos</th>
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top-3</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Cos</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-parchment">
+              {results.map(r => (
+                <tr key={r.modelId}>
+                  <td className="px-2 py-1 font-medium">{r.modelName}</td>
+                  <td className="px-2 py-1">{r.nearest[0]?.concept ?? "—"}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{r.nearest[0]?.similarity.toFixed(4) ?? "—"}</td>
+                  <td className="px-2 py-1">{r.nearest[1]?.concept ?? "—"}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{r.nearest[1]?.similarity.toFixed(4) ?? "—"}</td>
+                  <td className="px-2 py-1">{r.nearest[2]?.concept ?? "—"}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{r.nearest[2]?.similarity.toFixed(4) ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </DeepDiveSection>
+    </DeepDivePanel>
+  );
+}
+
+function SummaryStat({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "neutral" | "success" | "warning" | "error";
+}) {
+  const colour = {
+    neutral: "",
+    success: "text-success-600",
+    warning: "text-warning-500",
+    error: "text-error-500",
+  }[tone];
+  return (
+    <div className="bg-muted rounded-sm p-3">
+      <div className="font-sans text-caption text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className={`font-sans text-body-lg font-bold mt-1 tabular-nums ${colour}`}>{value}</div>
+      {hint && <div className="font-sans text-caption text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }

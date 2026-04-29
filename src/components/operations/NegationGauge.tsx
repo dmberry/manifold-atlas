@@ -17,6 +17,7 @@ import {
   negationGaugeTextList,
   type NegationGaugeResult,
 } from "@/lib/operations/negation-gauge";
+import { DeepDivePanel, DeepDiveSection } from "@/components/shared/DeepDivePanel";
 
 const DEFAULT_STATEMENT = "This policy is fair";
 
@@ -280,6 +281,8 @@ export function NegationGauge({ onQueryTime }: NegationGaugeProps) {
             })}
           </div>
 
+          <NegationGaugeDeepDive result={result} />
+
           {/* Theoretical context */}
           <div className="card-editorial p-4 border-l-4 border-l-burgundy">
             <h4 className="font-display text-body-sm font-bold mb-2">On the Negation Deficit</h4>
@@ -306,6 +309,127 @@ export function NegationGauge({ onQueryTime }: NegationGaugeProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Cross-model Deep Dive for Negation Gauge. Reports collapse rate
+ * across enabled models, mean cosine similarity between claim and
+ * negation, cross-model range, and a per-model comparison table so
+ * the user can read at a glance whether the deficit is structural
+ * (every model collapses) or contingent (some preserve negation).
+ */
+function NegationGaugeDeepDive({ result }: { result: NegationGaugeResult }) {
+  const models = result.models;
+  const n = models.length;
+  if (n === 0) return null;
+
+  const cosines = models.map(m => m.cosineSimilarity);
+  const mean = cosines.reduce((s, x) => s + x, 0) / n;
+  const variance = n > 1 ? cosines.reduce((s, x) => s + (x - mean) ** 2, 0) / n : 0;
+  const stdDev = Math.sqrt(variance);
+  const minCos = Math.min(...cosines);
+  const maxCos = Math.max(...cosines);
+  const range = maxCos - minCos;
+  const collapsedCount = models.filter(m => m.collapsed).length;
+  const collapseRate = n > 0 ? collapsedCount / n : 0;
+
+  const reading =
+    collapseRate === 1
+      ? "Every model collapses on this claim. The negation deficit is structural — every embedding model in the run treats the claim and its negation as near-identical points. This is the deficit doing its work."
+      : collapseRate === 0
+      ? "No model collapses on this claim. The geometry preserves the distinction between the claim and its negation across every embedding. Either the claim has unusually salient negation cues, or the models in this run all happen to encode this kind of statement structurally."
+      : `${collapsedCount} of ${n} models collapse. The finding is partial. Models that preserve the distinction tend to be those with greater dimensionality or those trained on more diverse corpora; the divergence is itself evidence about which models allocate manifold space to negation and which compress it away.`;
+
+  return (
+    <DeepDivePanel tagline="cross-model collapse rate · agreement reading · per-model table">
+      <DeepDiveSection
+        title="Cross-model summary"
+        tip="Aggregate cosine similarity between the claim and its negation across every enabled embedding model. Low cross-model range = the negation deficit is structural; high range = the deficit is contingent on which model you ask."
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SummaryStat label="Models" value={String(n)} hint="enabled and successfully embedded" />
+          <SummaryStat
+            label="Collapse rate"
+            value={`${(collapseRate * 100).toFixed(0)}%`}
+            hint={`${collapsedCount} / ${n} above threshold ${result.threshold}`}
+            tone={collapseRate >= 0.5 ? "error" : collapseRate > 0 ? "warning" : "success"}
+          />
+          <SummaryStat label="Mean cosine" value={mean.toFixed(4)} hint={`± ${stdDev.toFixed(4)} std dev`} />
+          <SummaryStat
+            label="Range"
+            value={range.toFixed(4)}
+            hint={`min ${minCos.toFixed(3)} · max ${maxCos.toFixed(3)}`}
+            tone={range < 0.05 ? "success" : range < 0.15 ? "warning" : "error"}
+          />
+        </div>
+        <p className="mt-3 font-body text-body-sm text-slate italic">{reading}</p>
+      </DeepDiveSection>
+
+      <DeepDiveSection
+        title="Per-model comparison"
+        tip="Every geometric measure for every model side-by-side, plus the collapse verdict. Useful for sanity-checking and CSV export."
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full font-sans text-caption">
+            <thead>
+              <tr className="border-b border-parchment">
+                <th className="text-left px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Model</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Cosine</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Distance</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Angular (°)</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Dims</th>
+                <th className="text-right px-2 py-1 text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Verdict</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-parchment">
+              {models.map(m => (
+                <tr key={m.modelId}>
+                  <td className="px-2 py-1 font-medium">{m.modelName}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.cosineSimilarity.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.cosineDistance.toFixed(4)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.angularDistance.toFixed(1)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{m.dimensions}</td>
+                  <td className="px-2 py-1 text-right">
+                    {m.collapsed ? (
+                      <span className="text-error-600 font-semibold">collapsed</span>
+                    ) : (
+                      <span className="text-success-600 font-semibold">preserved</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </DeepDiveSection>
+    </DeepDivePanel>
+  );
+}
+
+function SummaryStat({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "neutral" | "success" | "warning" | "error";
+}) {
+  const colour = {
+    neutral: "",
+    success: "text-success-600",
+    warning: "text-warning-500",
+    error: "text-error-500",
+  }[tone];
+  return (
+    <div className="bg-muted rounded-sm p-3">
+      <div className="font-sans text-caption text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className={`font-sans text-body-lg font-bold mt-1 tabular-nums ${colour}`}>{value}</div>
+      {hint && <div className="font-sans text-caption text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }
