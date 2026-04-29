@@ -212,7 +212,10 @@ export function AgonismTest({ onQueryTime }: AgonismTestProps) {
                   </div>
                 </div>
                 {r.models.map(m => (
-                  <div key={m.modelId} className="mt-2">
+                  <div key={m.modelId} className="mt-3">
+                    <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+                      {m.modelName}
+                    </div>
                     <SimilarityBridge
                       nameA={r.pair.positionA.thinker || "A"}
                       nameB={r.pair.positionB.thinker || "B"}

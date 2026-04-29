@@ -213,7 +213,10 @@ export function SohnRethelTest({ onQueryTime }: SohnRethelTestProps) {
                 {r.models.map(m => {
                   const level = abstractionLevel(m.similarity);
                   return (
-                    <div key={m.modelId} className="mt-2">
+                    <div key={m.modelId} className="mt-3">
+                      <div className="font-sans text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+                        {m.modelName}
+                      </div>
                       <SimilarityBridge
                         nameA="Use-value"
                         nameB="Exchange-value"

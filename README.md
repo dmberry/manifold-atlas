@@ -11,8 +11,8 @@
 
 **Author:** David M. Berry
 **Institution:** University of Sussex
-**Version:** 1.3.5
-**Date:** 24 April 2026
+**Version:** 1.3.6
+**Date:** 29 April 2026
 **Licence:** MIT
 
 Manifold Atlas is a vector-native research tool for studying how large language models organise meaning geometrically. It uses embedding APIs from multiple AI providers to collect coordinates from the manifold, then computes distances, clusters, projections, and topological features that reveal the geometry's structure. It also maps the discursive grammars LLM text generation falls into — the "Not X but Y" family of antithetical constructions — against the actual cosine geometry of the fragments they claim to oppose, surfacing what the tool calls the *synthetic dialectic*: rhetoric performing thesis-and-antithesis while the underlying geometric move is a slight rotation between near-neighbours.
